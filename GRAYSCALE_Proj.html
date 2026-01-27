@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ALCHEMY COLOR- GRAY SCALE Proj</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --border: #333;
+            --text-main: #e0e0e0;
+            --text-dim: #888;
+            --accent-blue: #007AFF;
+            --accent-purple: #AF52DE;
+            --accent-cyan: #5AC8FA;
+            --accent-green: #28a745;
+        }
+
+        body {
+            font-family: "Inter", sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .canvas-area {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            line-height: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+        }
+
+        .mask-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        .mask-active {
+            display: block;
+        }
+
+        .hue-mask {
+            background: gray;
+            mix-blend-mode: hue;
+        }
+
+        .hist-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .hist-box {
+            background: #0a0a0a;
+            border-radius: 2px;
+            padding: 5px;
+        }
+
+        .hist-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 2px;
+        }
+
+        .hist-canvas {
+            width: 100%;
+            height: 40px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 15px;
+            background: #252525;
+            border-radius: 6px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 9px;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 11px;
+            background: #333;
+            color: white;
+        }
+
+        .btn-mask.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button.sync {
+            border: none;
+            font-weight: 600;
+            flex: 1;
+            height: 40px;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 9px;  /* 减小到 9px 适合手机端 */
+        }
+
+        .btn-luma { background: #7D6C85; }
+        .btn-full { background: #6667AB; }
+
+        .btn-export {
+            background: transparent;
+            border: 1px solid #D4BBD2;
+            color: #D4BBD2;
+            width: 100px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        h2 {
+            font-weight: 200;
+            letter-spacing: 8px;
+            font-size: 14px;        /* 显著缩小字号（原先可能是 18px 或更大） */
+            margin: 20px 0 40px 0;
+        }
+
+        #linRange { accent-color: #7D6C85; }
+        #histRange { accent-color: #D4BBD2; }
+        #satEqRange { accent-color: #6667AB; }
+        #satUniRange { accent-color: #B0A4E3; } 
+        #smoothRange { accent-color: #C3C3D5; }
+        #opacityRange { accent-color: #8E9775; }
+
+        .slider-group:nth-child(1) span { color: #7D6C85; font-weight: bold; }
+        .slider-group:nth-child(2) span { color: #D4BBD2; font-weight: bold; }
+        .slider-group:nth-child(3) span { color: #6667AB; font-weight: bold; }
+        .slider-group:nth-child(4) span { color: #B0A4E3; font-weight: bold; }
+        .slider-group:nth-child(5) span { color: #C3C3D5; font-weight: bold; }
+        .slider-group:nth-child(6) span { color: #8E9775; font-weight: bold; }
+/* 预览按钮专用样式 */
+.btn-preview {
+    background: transparent;
+    border: 1px solid #7D6C85;
+    color: #7D6C85;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    transition: 0.2s;
+    user-select: none; /* 防止长按选中文本 */
+}
+.btn-preview:active {
+    background: #7D6C85;
+    color: #fff;
+}
+.btn-row strong {
+    font-size: 10px;        /* 缩小字号 */
+    letter-spacing: 2px;    /* 增加字母间距，看起来更神圣 */
+    color: var(--text-dim); /* 使用暗灰色，不抢按钮风头 */
+    font-weight: 800;       /* 极致加粗，小而有力 */
+    text-transform: uppercase;
+    align-items: center;
+    flex-wrap: wrap; /* 如果实在太挤，允许它优雅地换到第二行，而不是溢出 */
+}
+    </style>
+</head>
+
+<body>
+
+    <h2>ALCHEMY COLOR- GRAY SCALE Proj</h2>
+
+    <div class="container">
+        <div class="panel">
+            <div class="btn-row">
+                <strong>SOURCE A</strong>
+                <input type="file" id="fileA" accept="image/*" onchange="initCanvas('A')">
+                <button id="btnHueA" class="btn btn-mask" onclick="toggleMask('A', 'Hue')">Grayscale</button>
+                <button id="btnSatA" class="btn btn-mask" onclick="toggleMask('A', 'Sat')">Saturation</button>
+            </div>
+            <div class="canvas-area">
+                <canvas id="canvasA"></canvas>
+                <div id="maskAHue" class="mask-overlay hue-mask"></div>
+                <canvas id="maskASat" class="mask-overlay"></canvas>
+            </div>
+            <div class="hist-group">
+                <div class="hist-box">
+                    <div class="hist-label">LUMA</div><canvas id="histALuma" class="hist-canvas"></canvas>
+                </div>
+                <div class="hist-box">
+                    <div class="hist-label">SATURATION</div><canvas id="histASat" class="hist-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="controls-grid">
+                <div class="slider-group"><label>线性归一 <span id="v1">0%</span></label><input type="range" id="linRange" min="0" max="100" value="0"></div>
+                <div class="slider-group"><label>规定化 <span id="v2">50%</span></label><input type="range" id="histRange" min="0" max="100" value="50"></div>
+                <div class="slider-group"><label>饱和均衡 <span id="v3">0%</span></label><input type="range" id="satEqRange" min="0" max="100" value="0"></div>
+                <div class="slider-group"><label>饱和均一 <span id="v4">0%</span></label><input type="range" id="satUniRange" min="0" max="100" value="0"></div>
+                <div class="slider-group"><label>空间平滑 <span id="v5">0px</span></label><input type="range" id="smoothRange" min="0" max="10" value="0"></div>
+                <div class="slider-group"><label>全局强度 <span id="v6">100%</span></label><input type="range" id="opacityRange" min="0" max="100" value="100"></div>
+            </div>
+            <div class="action-bar">
+                <button class="sync btn-luma" onclick="executeSync('luma')">LUMA SYNC</button>
+                <button class="sync btn-full" onclick="executeSync('full')">FULL SYNC</button>
+                <button class="btn-export" onclick="exportImage()">导出 PNG</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="btn-row">
+                <strong>TARGET B</strong>
+                <input type="file" id="fileB" accept="image/*" onchange="initCanvas('B')">
+                <button id="btnHueB" class="btn btn-mask" onclick="toggleMask('B', 'Hue')">Grayscale</button>
+                <button id="btnSatB" class="btn btn-mask" onclick="toggleMask('B', 'Sat')">Saturation</button>
+                <button class="btn-preview" onmousedown="showOriginal()" onmouseup="showProcessed()" onmouseleave="showProcessed()" ontouchstart="showOriginal()" ontouchend="showProcessed()">HOLD TO COMPARE</button>
+</div>
+            </div>
+            <div class="canvas-area">
+                <canvas id="canvasB"></canvas>
+                <div id="maskBHue" class="mask-overlay hue-mask"></div>
+                <canvas id="maskBSat" class="mask-overlay"></canvas>
+            </div>
+            <div class="hist-group">
+                <div class="hist-box">
+                    <div class="hist-label">LUMA</div><canvas id="histBLuma" class="hist-canvas"></canvas>
+                </div>
+                <div class="hist-box">
+                    <div class="hist-label">SATURATION</div><canvas id="histBSat" class="hist-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dataA = null, originalB = null;
+        const getLuma = (r, g, b) => Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        const getSat = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b);
+
+        function initCanvas(type) {
+            const file = document.getElementById('file' + type).files[0];
+            const canvas = document.getElementById('canvas' + type);
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width; canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                if (type === 'A') dataA = data;
+                if (type === 'B') originalB = data;
+                updateVisuals(type, data);
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        function updateVisuals(type, imageData) {
+            drawHistogram(imageData.data, 'hist' + type + 'Luma', 'luma');
+            drawHistogram(imageData.data, 'hist' + type + 'Sat', 'sat');
+            generateSaturationMask(imageData, 'mask' + type + 'Sat');
+        }
+
+        function generateSaturationMask(imageData, targetCanvasId) {
+            const canvas = document.getElementById(targetCanvasId);
+            canvas.width = imageData.width; canvas.height = imageData.height;
+            const ctx = canvas.getContext('2d'), out = ctx.createImageData(canvas.width, canvas.height);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const s = getSat(imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]);
+                out.data[i] = out.data[i + 1] = out.data[i + 2] = s; out.data[i + 3] = 255;
+            }
+            ctx.putImageData(out, 0, 0);
+        }
+
+        function drawHistogram(pixels, canvasId, mode) {
+            const canvas = document.getElementById(canvasId), ctx = canvas.getContext('2d');
+            const hist = new Array(256).fill(0);
+            for (let i = 0; i < pixels.length; i += 4) {
+                const val = mode === 'luma' ? getLuma(pixels[i], pixels[i + 1], pixels[i + 2]) : getSat(pixels[i], pixels[i + 1], pixels[i + 2]);
+                hist[val]++;
+            }
+            const max = Math.max(...hist);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = mode === 'luma' ? '#555' : '#4a5d6a';
+            for (let i = 0; i < 256; i++) {
+                const h = (hist[i] / max) * canvas.height;
+                ctx.fillRect(i * (canvas.width / 256), canvas.height - h, 1, h);
+            }
+        }
+
+        function toggleMask(type, mode) {
+            const otherMode = mode === 'Hue' ? 'Sat' : 'Hue';
+            document.getElementById(`mask${type}${otherMode}`).classList.remove('mask-active');
+            document.getElementById(`btn${otherMode}${type}`).classList.remove('active');
+            const mask = document.getElementById(`mask${type}${mode}`);
+            const btn = document.getElementById(`btn${mode}${type}`);
+            btn.classList.toggle('active', mask.classList.toggle('mask-active'));
+        }
+
+        document.querySelectorAll('input[type=range]').forEach(r => {
+            r.oninput = () => {
+                const ids = { linRange: 'v1', histRange: 'v2', satEqRange: 'v3', satUniRange: 'v4', smoothRange: 'v5', opacityRange: 'v6' };
+                document.getElementById(ids[r.id]).textContent = r.value + (r.id === 'smoothRange' ? 'px' : '%');
+            }
+        });
+
+        function applySmoothing(imageData, radius) {
+            if (radius === 0) return imageData;
+            const { width, height, data } = imageData;
+            const out = new Uint8ClampedArray(data);
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let r = 0, g = 0, b = 0, count = 0;
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const nx = x + dx, ny = y + dy;
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                const idx = (ny * width + nx) * 4;
+                                r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                    }
+                    const oIdx = (y * width + x) * 4;
+                    out[oIdx] = r / count; out[oIdx + 1] = g / count; out[oIdx + 2] = b / count;
+                }
+            }
+            return new ImageData(out, width, height);
+        }
+
+        function executeSync(mode) {
+            if (!dataA || !originalB) return alert("Upload images first.");
+            const canvasB = document.getElementById('canvasB'), ctxB = canvasB.getContext('2d');
+            const pixelsA = dataA.data, workingB = new Uint8ClampedArray(originalB.data);
+
+            const linStr = document.getElementById('linRange').value / 100;
+            const histStr = document.getElementById('histRange').value / 100;
+            const satEqStr = document.getElementById('satEqRange').value / 100;
+            const satUniStr = document.getElementById('satUniRange').value / 100;
+            const smoothRad = parseInt(document.getElementById('smoothRange').value);
+            const opacity = document.getElementById('opacityRange').value / 100;
+
+            let histA = new Array(256).fill(0), colorsA = new Array(256).fill(null).map(() => []);
+            for (let i = 0; i < pixelsA.length; i += 4) {
+                let r = pixelsA[i], g = pixelsA[i + 1], b = pixelsA[i + 2], l = getLuma(r, g, b);
+                histA[l]++; if (colorsA[l].length < 150) colorsA[l].push({ r, g, b, s: getSat(r, g, b) });
+            }
+            if (mode === 'full') colorsA.forEach(p => p.sort((a, b) => a.s - b.s));
+            let cdfA = new Array(256).fill(0), cumA = 0;
+            for (let i = 0; i < 256; i++) { cumA += histA[i]; cdfA[i] = cumA / (pixelsA.length / 4); }
+
+            let histB = new Array(256).fill(0);
+            for (let i = 0; i < workingB.length; i += 4) histB[getLuma(workingB[i], workingB[i + 1], workingB[i + 2])]++;
+            let cdfB = new Array(256).fill(0), cumB = 0;
+            for (let i = 0; i < 256; i++) { cumB += histB[i]; cdfB[i] = cumB / (workingB.length / 4); }
+
+            const getR = (h, t) => {
+                let min = 0, max = 255, s = 0;
+                for (let i = 0; i < 256; i++) { s += h[i]; if (s > t * 0.01) { min = i; break; } }
+                s = 0; for (let i = 255; i >= 0; i--) { s += h[i]; if (s > t * 0.01) { max = i; break; } }
+                return { min, max };
+            };
+            const bA = getR(histA, pixelsA.length / 4), bB = getR(histB, workingB.length / 4);
+            let lut = new Array(256).fill(0);
+            for (let i = 0; i < 256; i++) {
+                let lin = ((i - bB.min) / (bB.max - bB.min || 1)) * (bA.max - bA.min) + bA.min;
+                let match = 0, minD = 1;
+                for (let j = 0; j < 256; j++) { let d = Math.abs(cdfB[i] - cdfA[j]); if (d < minD) { minD = d; match = j; } }
+                lut[i] = Math.max(0, Math.min(255, Math.round(i * (1 - linStr - histStr) + lin * linStr + match * histStr)));
+            }
+
+            let lastP = [{ r: 0, g: 0, b: 0, s: 0 }];
+            for (let i = 0; i < 256; i++) { if (colorsA[i].length === 0) colorsA[i] = lastP; else lastP = colorsA[i]; }
+            for (let i = 0; i < workingB.length; i += 4) {
+                const lumaB = getLuma(workingB[i], workingB[i + 1], workingB[i + 2]);
+                const pool = colorsA[lut[lumaB]];
+                let p;
+                if (mode === 'full') {
+                    const sb = getSat(workingB[i], workingB[i + 1], workingB[i + 2]);
+                    p = pool[Math.min(pool.length - 1, Math.floor((sb / 255) * pool.length))];
+                } else { p = pool[Math.floor(Math.random() * pool.length)]; }
+                workingB[i] = p.r; workingB[i + 1] = p.g; workingB[i + 2] = p.b;
+            }
+
+            if (satEqStr > 0 || satUniStr > 0) {
+                let sHist = new Array(256).fill(0), sSum = 0;
+                for (let i = 0; i < workingB.length; i += 4) {
+                    const s = getSat(workingB[i], workingB[i + 1], workingB[i + 2]);
+                    sHist[s]++; sSum += s;
+                }
+                const sAvg = sSum / (workingB.length / 4);
+                let sCdf = new Array(256).fill(0), sCum = 0;
+                for (let i = 0; i < 256; i++) { sCum += sHist[i]; sCdf[i] = sCum / (workingB.length / 4); }
+                for (let i = 0; i < workingB.length; i += 4) {
+                    const r = workingB[i], g = workingB[i + 1], b = workingB[i + 2], sOld = getSat(r, g, b);
+                    if (sOld === 0) continue;
+                    const sNew = (sOld * (1 - satEqStr) + sCdf[sOld] * 255 * satEqStr) * (1 - satUniStr) + sAvg * satUniStr;
+                    const ratio = sNew / sOld, luma = getLuma(r, g, b);
+                    workingB[i] = Math.max(0, Math.min(255, luma + (r - luma) * ratio));
+                    workingB[i + 1] = Math.max(0, Math.min(255, luma + (g - luma) * ratio));
+                    workingB[i + 2] = Math.max(0, Math.min(255, luma + (b - luma) * ratio));
+                }
+            }
+
+            // 5. 混合原图 (Opacity Logic)
+            if (opacity < 1.0) {
+                for (let i = 0; i < workingB.length; i += 4) {
+                    workingB[i] = workingB[i] * opacity + originalB.data[i] * (1 - opacity);
+                    workingB[i+1] = workingB[i+1] * opacity + originalB.data[i+1] * (1 - opacity);
+                    workingB[i+2] = workingB[i+2] * opacity + originalB.data[i+2] * (1 - opacity);
+                }
+            }
+
+            let res = new ImageData(workingB, canvasB.width, canvasB.height);
+            if (smoothRad > 0) res = applySmoothing(res, smoothRad);
+
+            ctxB.putImageData(res, 0, 0);
+            updateVisuals('B', res);
+        }
+
+        function exportImage() {
+            const canvas = document.getElementById('canvasB');
+            if (canvas.width === 0) return;
+            const link = document.createElement('a');
+            link.download = `Chromasync_Export.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        // 全局变量用于暂存处理后的结果，以便对比
+let processedDataB = null;
+
+// 显示原图
+function showOriginal() {
+    if (!originalB) return;
+    const canvasB = document.getElementById('canvasB');
+    const ctxB = canvasB.getContext('2d');
+    // 暂存当前正在显示的（处理后的）图
+    processedDataB = ctxB.getImageData(0, 0, canvasB.width, canvasB.height);
+    // 渲染原始图
+    ctxB.putImageData(originalB, 0, 0);
+}
+
+// 恢复处理后的图
+function showProcessed() {
+    if (!processedDataB) return;
+    const canvasB = document.getElementById('canvasB');
+    const ctxB = canvasB.getContext('2d');
+    // 渲染之前暂存的处理图
+    ctxB.putImageData(processedDataB, 0, 0);
+    processedDataB = null; // 清空暂存
+}
+    </script>
+</body>
+</html>

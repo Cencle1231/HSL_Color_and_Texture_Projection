@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CHRONOS TEXTURE - HSL Proj</title>
+    <style>
+        :root { --bg: #0d0d0f; --panel: #16161a; --accent: #A38CB4; --border: #2d2d35; --text: #d1d1d1; }
+        body { font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
+        .main-stack { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 850px; padding-bottom: 350px; }
+        .image-card { background: var(--panel); border: 1px solid var(--border); padding: 12px; border-radius: 12px; }
+        .upload-trigger { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 5px 0; border-bottom: 1px solid #222; margin-bottom: 8px; font-size: 10px; font-weight: bold; color: var(--accent); }
+        input[type="file"] { display: none; }
+        canvas { width: 100%; height: auto; border-radius: 4px; background: #000; }
+        .controls { position: fixed; bottom: 10px; background: rgba(22, 22, 26, 0.98); backdrop-filter: blur(15px); border: 1px solid var(--border); padding: 15px; border-radius: 15px; width: 92%; max-width: 810px; z-index: 100; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        label { font-size: 8px; color: #888; text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .val-span { color: var(--accent); font-weight: bold; }
+        input[type=range] { accent-color: var(--accent); cursor: pointer; height: 4px; width: 100%; margin: 6px 0; }
+        
+        .hue-slider { -webkit-appearance: none; height: 10px !important; border-radius: 5px; background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%); }
+        .luma-slider { -webkit-appearance: none; height: 10px !important; border-radius: 5px; background: linear-gradient(to right, #000 0%, #fff 100%); }
+        .sat-slider { -webkit-appearance: none; height: 10px !important; border-radius: 5px; background: linear-gradient(to right, #444 0%, #8241c0 100%); }
+
+        .btn-group { grid-column: span 2; display: flex; gap: 8px; margin-top: 10px; }
+        button { flex: 1; height: 40px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; font-size: 10px; text-transform: uppercase; }
+         .btn-run { background: var(--accent); }
+
+        .full-row { grid-column: span 2; border-top: 1px solid #2d2d35; padding-top: 6px; }
+
+        /* 新增：模式选择样式，与你原有的 input 风格保持一致 */
+        select { background: #222; color: var(--accent); border: 1px solid var(--border); border-radius: 4px; font-size: 9px; padding: 2px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <h2 style="font-weight: 200; letter-spacing: 5px; margin: 10px 0 15px; font-size: 18px;">CHRONOS TEXTURE - HSL Proj</h2>
+
+    <div class="main-stack">
+        <div class="image-card">
+            <label class="upload-trigger" for="fileA" style="color: #bbddeb; font-weight: 600;">SOURCE A (TEXTURE) <i>[UPLOAD]</i></label>
+            <input type="file" id="fileA" accept="image/*" onchange="handleFile('A')">
+            <canvas id="canvasA"></canvas>
+        </div>
+        <div class="image-card">
+            <label class="upload-trigger" for="fileB" style="color: #b6b6eb; font-weight: 600;">TARGET B (BASE) <i>[UPLOAD]</i></label>
+            <input type="file" id="fileB" accept="image/*" onchange="handleFile('B')">
+            <canvas id="canvasB"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="grid">
+                <div class="slider-group">
+                    <label>Intensity (强度) <span id="v0" class="val-span">100%</span></label>
+                    <input type="range" id="strength" min="0" max="100" value="100">
+                </div>
+                <div class="slider-group">
+                    <label>Mode (模式) 
+                        <select id="blendMode">
+                            <option value="modulate">Luma Sync</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="overlay">Overlay</option>
+                        </select>
+                    </label>
+                    <input type="range" id="tScale" min="1" max="50" value="20">
+                    <label style="margin-top:-5px">Texture Scale <span id="v3" class="val-span">1.0x</span></label>
+                </div>
+                
+                <div class="full-row" style="display:flex; gap:10px">
+                    <div style="flex:1"><label>Target Hue (色相目标)<span id="vHue" class="val-span">Auto</span></label><input type="range" id="manualHue" min="0" max="360" value="0" class="hue-slider"></div>
+                    <div style="flex:1"><label>Hue Tol. (色相容差) <span id="v1" class="val-span">40°</span></label><input type="range" id="tolerance" min="2" max="180" value="40"></div>
+                </div>
+
+                <div class="full-row" style="display:flex; gap:10px">
+                    <div style="flex:1"><label>Target Luma (灰度目标) <span id="vLuma" class="val-span">128</span></label><input type="range" id="targetLuma" min="0" max="255" value="128" class="luma-slider"></div>
+                    <div style="flex:1"><label>Luma Tol. (灰度容差) <span id="vLTol" class="val-span">100</span></label><input type="range" id="lumaTol" min="5" max="255" value="100"></div>
+                </div>
+
+                <div class="full-row" style="display:flex; gap:10px">
+                    <div style="flex:1"><label>Target Sat (纯度目标) <span id="vSat" class="val-span">128</span></label><input type="range" id="targetSat" min="0" max="255" value="128" class="sat-slider"></div>
+                    <div style="flex:1"><label>Sat Tol. (纯度容差) <span id="vSTol" class="val-span">128</span></label><input type="range" id="satTol" min="5" max="255" value="128"></div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-run" onclick="execute()">Execute Mapping</button>
+                    <button style="background:#313b3e" id="compareBtn">Compare</button>
+                    <button style="background:transparent; border:1px solid var(--accent); color:var(--accent)" onclick="download()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let imgA, imgB, lastResult;
+
+    function handleFile(type) {
+        const file = document.getElementById('file' + type).files[0];
+        const canvas = document.getElementById('canvas' + type);
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+            const maxDim = 1024;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                const ratio = Math.min(maxDim/w, maxDim/h);
+                w *= ratio; h *= ratio;
+            }
+            canvas.width = w; canvas.height = h;
+            ctx.drawImage(img, 0, 0, w, h);
+            if(type === 'A') {
+                imgA = ctx.getImageData(0, 0, w, h);
+                const auto = analyzeHue(imgA);
+                document.getElementById('manualHue').value = auto;
+                document.getElementById('vHue').innerText = auto + "° (Auto)";
+            } else { 
+                imgB = ctx.getImageData(0, 0, w, h); 
+                lastResult = null; 
+            }
+        };
+        img.src = URL.createObjectURL(file);
+    }
+
+    function getHumaSat(r, g, b) {
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const d = max - min;
+        let h = -1;
+        if (d !== 0) {
+            h = (max === r) ? (g - b) / d + (g < b ? 6 : 0) : (max === g) ? (b - r) / d + 2 : (r - g) / d + 4;
+            h *= 60;
+        }
+        return { h, s: d, v: (r*0.299 + g*0.587 + b*0.114) };
+    }
+
+    function analyzeHue(imageData) {
+        const bins = new Array(360).fill(0);
+        for(let i=0; i<imageData.data.length; i+=32) {
+            const r=imageData.data[i], g=imageData.data[i+1], b=imageData.data[i+2];
+            const stats = getHumaSat(r, g, b);
+            if(stats.h !== -1 && stats.s > 20) bins[Math.floor(stats.h)] += stats.s;
+        }
+        return bins.indexOf(Math.max(...bins));
+    }
+
+    const setupUI = (id, vid, s) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.oninput = e => {
+            let val = e.target.value;
+            if(id === 'tScale') document.getElementById(vid).innerText = (val/10).toFixed(1) + "x";
+            else if(id === 'manualHue') {
+                document.getElementById(vid).innerText = val + "°";
+                document.getElementById(vid).style.color = `hsl(${val}, 70%, 70%)`;
+            }
+            else document.getElementById(vid).innerText = val + s;
+        };
+    };
+    ['strength','v0','%','tolerance','v1','°','manualHue','vHue','°','tScale','v3','','targetLuma','vLuma','','lumaTol','vLTol','','targetSat','vSat','','satTol','vSTol',''].forEach((x,i,a) => {
+        if(i%3===0) setupUI(x, a[i+1], a[i+2]);
+    });
+
+    // --- 修复后的核心函数 ---
+    function execute() {
+        if(!imgA || !imgB) return;
+        const wB = imgB.width, hB = imgB.height, wA = imgA.width, hA = imgA.height;
+        const out = new Uint8ClampedArray(imgB.data);
+        
+        const str = parseInt(document.getElementById('strength').value) / 100;
+        const scale = parseInt(document.getElementById('tScale').value) / 10;
+        const mode = document.getElementById('blendMode').value; // 仅保留这一处定义
+        
+        const tHue = parseInt(document.getElementById('manualHue').value);
+        const hTol = parseInt(document.getElementById('tolerance').value);
+        const tLuma = parseInt(document.getElementById('targetLuma').value);
+        const lTol = parseInt(document.getElementById('lumaTol').value);
+        const tSat = parseInt(document.getElementById('targetSat').value);
+        const sTol = parseInt(document.getElementById('satTol').value);
+
+        let lSum = 0, lCount = 0;
+        for(let i=0; i<imgA.data.length; i+=64) {
+            lSum += (imgA.data[i]*0.299 + imgA.data[i+1]*0.587 + imgA.data[i+2]*0.114);
+            lCount++;
+        }
+        const avgLumaA = lSum / lCount || 128;
+
+        for (let i = 0; i < out.length; i += 4) {
+            const rB = out[i], gB = out[i + 1], bB = out[i + 2];
+            const stats = getHumaSat(rB, gB, bB);
+            if (stats.h === -1) continue;
+
+            let hDiff = Math.abs(stats.h - tHue);
+            if (hDiff > 180) hDiff = 360 - hDiff;
+            let lDiff = Math.abs(stats.v - tLuma);
+            let sDiff = Math.abs(stats.s - tSat);
+
+            if (hDiff <= hTol && lDiff <= lTol && sDiff <= sTol) {
+                const px = (i / 4) % wB, py = Math.floor((i / 4) / wB);
+                const sX = Math.floor((px / scale) % wA), sY = Math.floor((py / scale) % hA);
+                const iA = (sY * wA + sX) * 4;
+                const rA = imgA.data[iA], gA = imgA.data[iA + 1], bA = imgA.data[iA + 2];
+                let tR, tG, tB;
+
+                if (mode === 'multiply') {
+                    tR = (rB * rA) / 255; tG = (gB * gA) / 255; tB = (bB * bA) / 255;
+                } else if (mode === 'overlay') {
+                    const ov = (b, a) => (b < 128 ? (2 * b * a / 255) : (255 - 2 * (255 - b) * (255 - a) / 255));
+                    tR = ov(rB, rA); tG = ov(gB, gA); tB = ov(bB, bA);
+                } else {
+                    const factor = (rA * 0.299 + gA * 0.587 + bA * 0.114) / avgLumaA;
+                    tR = rB * factor; tG = gB * factor; tB = bB * factor;
+                }
+                out[i] = rB * (1 - str) + tR * str;
+                out[i + 1] = gB * (1 - str) + tG * str;
+                out[i + 2] = bB * (1 - str) + tB * str;
+            }
+        }
+        // 关键修复点：重新加入这一行
+        lastResult = new ImageData(out, wB, hB);
+        document.getElementById('canvasB').getContext('2d').putImageData(lastResult, 0, 0);
+    }
+
+    const compareBtn = document.getElementById('compareBtn');
+    const updateCanvas = (data) => {
+        if (!data) return;
+        document.getElementById('canvasB').getContext('2d').putImageData(data, 0, 0);
+    };
+    compareBtn.onmousedown = () => imgB && updateCanvas(imgB);
+    compareBtn.onmouseup = () => lastResult && updateCanvas(lastResult);
+    compareBtn.onmouseleave = () => lastResult && updateCanvas(lastResult);
+    compareBtn.ontouchstart = (e) => { e.preventDefault(); imgB && updateCanvas(imgB); };
+    compareBtn.ontouchend = () => lastResult && updateCanvas(lastResult);
+    
+    function download() {
+        if(!lastResult) return;
+        const link = document.createElement('a');
+        link.download = 'LumaSync_Result.png';
+        link.href = document.getElementById('canvasB').toDataURL();
+        link.click();
+    }
+</script>
+</body>
+</html>

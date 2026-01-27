@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IRIS COLOR- SATURATION Proj</title>
+    <style>
+        :root { --bg: #0d0d0f; --panel: #16161a; --accent: #7D6C85; --border: #2d2d35; --text: #d1d1d1; }
+        body { font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .main-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 850px; }
+        .image-card { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 12px; }
+        
+        /* 核心修复：让 Label 变成可点击的大区域 */
+        .upload-trigger { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 5px 0; border-bottom: 1px solid #222; margin-bottom: 10px; transition: 0.3s; }
+        .upload-trigger:hover { color: var(--accent); border-color: var(--accent); }
+        .upload-trigger span { font-size: 10px; letter-spacing: 1px; font-weight: bold; }
+        .upload-trigger i { font-size: 9px; opacity: 0.5; font-style: normal; }
+        
+        input[type="file"] { display: none; } /* 隐藏原生难看的按钮 */
+        
+        canvas { width: 100%; height: auto; border: 1px solid #000; display: block; border-radius: 4px; background: #000; }
+        .controls { position: sticky; bottom: 20px; background: rgba(22, 22, 26, 0.95); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 20px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 100; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .slider-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 9px; color: #888; text-transform: uppercase; display: flex; justify-content: space-between; }
+        .val-span { color: var(--accent); font-weight: bold; }
+        input[type=range] { accent-color: var(--accent); cursor: pointer; height: 4px; width: 100%; }
+        .btn-group { grid-column: span 3; display: flex; gap: 10px; margin-top: 10px; }
+        button { flex: 1; height: 40px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; font-size: 11px; transition: 0.2s; text-transform: uppercase; }
+        .btn-run { background: var(--accent); }
+        .btn-save { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-compare { background: #333; color: #aaa; border: 1px solid #444; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <h2 style="font-weight: 200; letter-spacing: 8px; margin: 10px 0 20px; font-size: 14px; ">IRIS COLOR- SATURATION Proj</h2>
+
+    <div class="main-stack">
+        <div class="image-card">
+            <label class="upload-trigger" for="fileA">
+                <span>SOURCE A (COLOR BANK)</span>
+                <i>[ CLICK TO UPLOAD ]</i>
+            </label>
+            <input type="file" id="fileA" accept="image/*" onchange="handleFile('A')">
+            <canvas id="canvasA"></canvas>
+        </div>
+
+        <div class="image-card">
+            <label class="upload-trigger" for="fileB">
+                <span>TARGET B (STRUCTURE)</span>
+                <i>[ CLICK TO UPLOAD ]</i>
+            </label>
+            <input type="file" id="fileB" accept="image/*" onchange="handleFile('B')">
+            <canvas id="canvasB"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="grid">
+                <div class="slider-group"><label>Strength <span id="v0" class="val-span">100%</span></label><input type="range" id="strength" min="0" max="100" value="100"></div>
+                <div class="slider-group"><label>Hist Equalize <span id="v1" class="val-span">0%</span></label><input type="range" id="heq" min="0" max="100" value="0"></div>
+                <div class="slider-group"><label>Normalize <span id="v2" class="val-span">0%</span></label><input type="range" id="norm" min="0" max="100" value="0"></div>
+                
+                <div class="slider-group"><label>Sat Gain <span id="v3" class="val-span">1.2x</span></label><input type="range" id="gain" min="10" max="30" value="12"></div>
+                <div class="slider-group"><label>Gain Threshold <span id="v4" class="val-span">30</span></label><input type="range" id="threshold" min="0" max="100" value="30"></div>
+                <div class="slider-group"><label>Search Tolerance <span id="v5" class="val-span">5</span></label><input type="range" id="tolerance" min="0" max="25" value="5"></div>
+
+                <div class="slider-group"><label>R Channel <span id="vR" class="val-span">1.0x</span></label><input type="range" id="rSat" min="0" max="30" value="10"></div>
+                <div class="slider-group"><label>G Channel <span id="vG" class="val-span">1.0x</span></label><input type="range" id="gSat" min="0" max="30" value="10"></div>
+                <div class="slider-group"><label>B Channel <span id="vB" class="val-span">1.0x</span></label><input type="range" id="bSat" min="0" max="30" value="10"></div>
+
+                <div class="slider-group" style="grid-column: span 2;">
+                    <label>Spatial Cluster <span id="v6" class="val-span">0%</span></label>
+                    <input type="range" id="cluster" min="0" max="100" value="0">
+                </div>
+                <div class="slider-group">
+                    <label>Lead Outline <span id="v7" class="val-span">0%</span></label>
+                    <input type="range" id="outline" min="0" max="100" value="0">
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn-run" onclick="execute()">Run Render</button>
+                    <button id="compareBtn" class="btn-compare">Hold Compare</button>
+                    <button class="btn-save" onclick="download()">Save Image</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let imgA = null, imgB = null, lastResult = null;
+
+    function handleFile(type) {
+        const file = document.getElementById('file' + type).files[0];
+        if(!file) return;
+        const canvas = document.getElementById('canvas' + type);
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+            canvas.width = img.width; canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            if(type === 'A') imgA = ctx.getImageData(0, 0, img.width, img.height);
+            else { imgB = ctx.getImageData(0, 0, img.width, img.height); lastResult = null; }
+        };
+        img.src = URL.createObjectURL(file);
+    }
+
+    const bindUI = (id, vid, suffix="", div=1) => {
+        document.getElementById(id).oninput = e => {
+            document.getElementById(vid).innerText = (div !== 1 ? (e.target.value/div).toFixed(1) : e.target.value) + suffix;
+        };
+    };
+    bindUI('strength', 'v0', '%'); bindUI('heq', 'v1', '%'); bindUI('norm', 'v2', '%');
+    bindUI('gain', 'v3', 'x', 10); bindUI('threshold', 'v4'); bindUI('tolerance', 'v5');
+    bindUI('cluster', 'v6', '%'); bindUI('outline', 'v7', '%');
+    bindUI('rSat', 'vR', 'x', 10); bindUI('gSat', 'vG', 'x', 10); bindUI('bSat', 'vB', 'x', 10);
+
+    function getStableIndex(x, y, l, strength, poolSize) {
+        const scale = Math.pow(0.1, strength / 50); 
+        const nx = Math.floor(x * scale); const ny = Math.floor(y * scale); const nl = Math.floor(l * scale);
+        const seed = (nx * 12.9898 + ny * 78.233 + nl * 437.5) % 32;
+        const val = Math.abs(Math.sin(seed * 43758.5453) % 1);
+        return Math.floor(val * poolSize);
+    }
+
+    const compareBtn = document.getElementById('compareBtn');
+    const showOriginal = () => { if(imgB) document.getElementById('canvasB').getContext('2d').putImageData(imgB, 0, 0); };
+    const showResult = () => { if(lastResult) document.getElementById('canvasB').getContext('2d').putImageData(lastResult, 0, 0); };
+
+    compareBtn.addEventListener('mousedown', showOriginal);
+    compareBtn.addEventListener('mouseup', showResult);
+    compareBtn.addEventListener('mouseleave', showResult);
+    compareBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showOriginal(); });
+    compareBtn.addEventListener('touchend', showResult);
+
+    function execute() {
+        if(!imgA || !imgB) return;
+        const w = imgB.width, h = imgB.height;
+        const out = new Uint8ClampedArray(imgB.data);
+        const str = document.getElementById('strength').value / 100;
+        const heqAmount = document.getElementById('heq').value / 100;
+        const normAmount = document.getElementById('norm').value / 100;
+        const clusterAmt = document.getElementById('cluster').value;
+        const outlineAmt = document.getElementById('outline').value / 100;
+        const gain = document.getElementById('gain').value / 10;
+        const thres = parseInt(document.getElementById('threshold').value);
+        const tol = parseInt(document.getElementById('tolerance').value);
+        const rW = document.getElementById('rSat').value / 10;
+        const gW = document.getElementById('gSat').value / 10;
+        const bW = document.getElementById('bSat').value / 10;
+
+        const buckets = Array.from({length: 256}, () => []);
+        for(let i=0; i < imgA.data.length; i += 8) {
+            const r = imgA.data[i], g = imgA.data[i+1], b = imgA.data[i+2];
+            const l = Math.round((r + g + b) / 3);
+            if(buckets[l].length < 100) buckets[l].push([r, g, b]);
+        }
+
+        const lumas = new Uint8Array(imgB.data.length/4);
+        const hist = new Int32Array(256);
+        let minL = 255, maxL = 0;
+        for(let i=0; i < imgB.data.length; i+=4) {
+            const l = Math.round(0.299*imgB.data[i] + 0.587*imgB.data[i+1] + 0.114*imgB.data[i+2]);
+            hist[l]++; lumas[i/4] = l;
+            if(l < minL) minL = l; if(l > maxL) maxL = l;
+        }
+
+        const cdf = new Float32Array(256);
+        cdf[0] = hist[0];
+        for(let i=1; i<256; i++) cdf[i] = cdf[i-1] + hist[i];
+        const cdfMin = cdf[minL], total = imgB.data.length/4;
+
+        for(let y=0; y < h; y++) {
+            for(let x=0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                let l = lumas[i/4];
+                const lNorm = ((l - minL) / (maxL - minL)) * 255;
+                l = l * (1 - normAmount) + lNorm * normAmount;
+                const lEq = ((cdf[Math.round(l)] - cdfMin) / (total - cdfMin)) * 255;
+                l = l * (1 - heqAmount) + lEq * heqAmount;
+                
+                const targetL = Math.round(l);
+                let pool = [];
+                for(let t = Math.max(0, targetL - tol); t <= Math.min(255, targetL + tol); t++) {
+                    if(buckets[t].length > 0) { pool = buckets[t]; break; } 
+                }
+                if(!pool.length) pool = [[imgB.data[i], imgB.data[i+1], imgB.data[i+2]]];
+
+                let pick;
+                if (clusterAmt == 0) pick = pool[Math.floor(Math.random() * pool.length)];
+                else pick = pool[getStableIndex(x, y, targetL, clusterAmt, pool.length)];
+                
+                let r = pick[0] * str + imgB.data[i] * (1-str);
+                let g = pick[1] * str + imgB.data[i+1] * (1-str);
+                let b = pick[2] * str + imgB.data[i+2] * (1-str);
+
+                const s = Math.max(r,g,b) - Math.min(r,g,b);
+                const avg = (r+g+b)/3;
+                if(s > thres) { r = avg + (r-avg) * gain; g = avg + (g-avg) * gain; b = avg + (b-avg) * gain; }
+
+                r = avg + (r - avg) * rW; g = avg + (g - avg) * gW; b = avg + (b - avg) * bW;
+
+                if(outlineAmt > 0 && x < w-1 && y < h-1) {
+                    const lNextX = lumas[(y * w + (x + 1))];
+                    const lNextY = lumas[((y + 1) * w + x)];
+                    const edge = Math.max(Math.abs(l - lNextX), Math.abs(l - lNextY));
+                    if(edge > 20) {
+                        const darkness = 1 - (outlineAmt * (edge / 100));
+                        r *= darkness; g *= darkness; b *= darkness;
+                    }
+                }
+                out[i]=r; out[i+1]=g; out[i+2]=b;
+            }
+        }
+        lastResult = new ImageData(out, w, h);
+        document.getElementById('canvasB').getContext('2d').putImageData(lastResult, 0, 0);
+    }
+
+    function download() {
+        const canvas = document.getElementById('canvasB');
+        const link = document.createElement('a');
+        link.download = 'LumaSync_V9.1.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+</script>
+</body>
+</html>
