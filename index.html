@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HSL Color & Texture Projection</title>
     <style>
+        /* ... 你原本的 CSS 保持不变 ... */
         :root {
             --bg: #0a0a0c;
             --panel: rgba(20, 20, 23, 0.75);
@@ -25,7 +26,6 @@
             background-color: var(--bg);
         }
 
-        /* 基础背景层：保留原色 */
         body::before {
             content: "";
             position: fixed;
@@ -36,11 +36,9 @@
             background: url('Background.png') no-repeat center;
             background-size: cover;
             z-index: -2;
-            /* 呼吸动画：控制亮度和透明度 */
             animation: background-breath 8s ease-in-out infinite;
         }
 
-        /* 细闪呼吸层：只在图片线条位置产生微弱闪烁 */
         body::after {
             content: "";
             position: fixed;
@@ -49,28 +47,23 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            /* 使用图片作为遮罩 */
             -webkit-mask-image: url('Background.png');
             mask-image: url('Background.png');
             -webkit-mask-size: cover;
             mask-size: cover;
             -webkit-mask-position: center;
-            
-            /* 模拟细闪效果：微小的径向白光 */
             background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4) 0%, transparent 10%);
-            background-size: 10px 10px; /* 颗粒感细闪 */
+            background-size: 10px 10px;
             opacity: 0;
             animation: sparkle-pulse 4s ease-in-out infinite;
             pointer-events: none;
         }
 
-        /* 背景呼吸动画 */
         @keyframes background-breath {
             0%, 100% { opacity: 0.7; filter: brightness(1); }
             50% { opacity: 1; filter: brightness(1.2); }
         }
 
-        /* 细闪脉冲动画 */
         @keyframes sparkle-pulse {
             0%, 100% { opacity: 0; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.02); }
@@ -186,15 +179,6 @@
             line-height: 1.6;
         }
 
-        .footer-paw {
-            width: 80px;
-            height: auto;
-            image-rendering: pixelated;
-            filter: drop-shadow(0 0 8px rgba(175, 82, 222, 0.5));
-            margin-bottom: 10px;
-            opacity: 0.8;
-        }
-
         footer {
             margin-top: auto;
             padding: 20px 40px 40px;
@@ -206,13 +190,49 @@
             align-items: center;
         }
 
+        /* --- 这里是彩蛋新增的样式 --- */
+        .footer-paw {
+            width: 80px;
+            height: auto;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 0 8px rgba(175, 82, 222, 0.5));
+            margin-bottom: 10px;
+            opacity: 0.8;
+            cursor: pointer; /* 增加手型，提示可点击 */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+        }
+
+        .footer-paw:active {
+            transform: scale(0.8); /* 点击反馈 */
+        }
+
+        .meow-rain {
+            position: fixed;
+            top: -50px;
+            pointer-events: none;
+            z-index: 1000;
+            font-family: monospace;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: meow-fall linear forwards;
+            text-shadow: 0 0 10px currentColor; /* 增加发光感，匹配背景纹理 */
+        }
+
+        @keyframes meow-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(20deg); opacity: 0; }
+        }
+
         @media (max-width: 480px) {
             header { padding: 40px 10px; }
             h2 { font-size: 13px; letter-spacing: 4px; }
             .logo { width: 48px; }
             .header-container { gap: 12px; padding: 15px 20px; width: 90%; }
             .grid { grid-template-columns: 1fr; }
-            .footer-paw { width: 30px; }
+            .footer-paw { width: 40px; }
         }
     </style>
 </head>
@@ -255,9 +275,61 @@
     </div>
 
     <footer>
-        <img src="paw.png" alt="Paw" class="footer-paw">
+        <img src="paw.png" alt="Paw" class="footer-paw" id="pawBtn">
         &copy; 2026 DIGITAL Meow-meow PROJECT
     </footer>
+
+    <script>
+        const paw = document.getElementById('pawBtn');
+        const meows = ['(=^･ω･^=)', '(ﾐ´ω`ﾐ)', '(=^-ω-^=)', '(=; ｪ ;) ', '(=^‥^=)', '(^・ω・^ )', 'ฅ^•ﻌ•^ฅ', '(=ↀωↀ=)'];
+        
+        // 获取CSS变量中的颜色
+        const colors = ['#87CEEB', '#AF52DE', '#E0E0E0', '#555555'];
+
+        let isRaining = false;
+
+        paw.addEventListener('click', () => {
+            if (isRaining) return; // 防止连续点击导致浏览器卡死
+            isRaining = true;
+
+            const duration = 3000; // 雨持续3秒
+            const endTime = Date.now() + duration;
+
+            const timer = setInterval(() => {
+                if (Date.now() > endTime) {
+                    clearInterval(timer);
+                    setTimeout(() => { isRaining = false; }, 2000); // 彻底结束后允许再次触发
+                    return;
+                }
+                createMeow();
+            }, 80); // 产生字符的频率
+        });
+
+        function createMeow() {
+            const el = document.createElement('div');
+            el.className = 'meow-rain';
+            
+            // 随机属性
+            const text = meows[Math.floor(Math.random() * meows.length)];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const xPos = Math.random() * 100; // 屏幕宽度百分比
+            const fontSize = Math.random() * 12 + 12; // 12px-24px
+            const fallSpeed = Math.random() * 2 + 1.5; // 1.5s-3.5s
+
+            el.innerText = text;
+            el.style.left = xPos + 'vw';
+            el.style.color = color;
+            el.style.fontSize = fontSize + 'px';
+            el.style.animationDuration = fallSpeed + 's';
+            
+            document.body.appendChild(el);
+
+            // 动画执行完移除DOM
+            setTimeout(() => {
+                el.remove();
+            }, fallSpeed * 1000);
+        }
+    </script>
 
 </body>
 </html>
