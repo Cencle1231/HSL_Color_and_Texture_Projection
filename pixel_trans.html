@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel Translator</title>
+    <style>
+        :root { 
+            --primary: #a09dd8;  /* 导入按钮：更深邃的灰蓝色 */
+            --success: #6c7b8f;  /* 导出按钮：低饱和度的森林绿 */
+            --bg: #0f172a; 
+            --card: #1e293b; 
+            --accent: #969e8c;   /* 强调色：复古琥珀色 */
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #f8fafc; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        
+        .panel { background: var(--card); padding: 24px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); width: 100%; max-width: 550px; display: grid; gap: 16px; border: 1px solid #334155; margin-bottom: 20px; }
+        
+        .tabs { display: flex; gap: 4px; background: #0f172a; padding: 4px; border-radius: 8px; margin-bottom: 5px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; cursor: pointer; border-radius: 6px; font-weight: 600; transition: 0.3s; font-size: 12px; }
+        .tab-btn.active { background: var(--card); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .tab-content { display: none; }
+        .tab-content.active { display: grid; gap: 16px; }
+
+        .info-badge { background: #0f172a; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-around; font-size: 12px; color: #94a3b8; }
+        .info-badge b { color: var(--success); }
+
+        .palette-preview-container { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
+        .color-preview-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; border: 1px solid #475569; }
+        .swatch { flex: 1; height: 100%; }
+
+        .slider-group { display: flex; flex-direction: column; gap: 4px; }
+        .label-row { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        input[type="range"] { width: 100%; accent-color: var(--primary); }
+
+        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+        .btn-palette { background: #334155; color: #cbd5e1; padding: 8px 4px; border: 1px solid transparent; border-radius: 4px; font-size: 10px; text-transform: uppercase; cursor: pointer; }
+        .btn-palette:hover { background: #475569; }
+        .btn-palette.active { background: var(--primary); color: white; border-color: #f8fafc; }
+
+        .option-container { display: flex; flex-wrap: wrap; gap: 12px; padding: 5px 0; }
+        .option-row { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+        
+        .export-zone { background: #2d3a4f; padding: 15px; border-radius: 12px; display: grid; gap: 10px; border: 1px dashed #475569; }
+        .export-controls { display: flex; gap: 8px; }
+        .export-controls select { flex: 1; }
+        select, button { cursor: pointer; padding: 10px; border: none; border-radius: 6px; font-weight: 600; transition: 0.2s; font-size: 13px; }
+        select { background: #0f172a; color: white; border: 1px solid #475569; }
+        .btn-import { background: var(--primary); color: white; width: 100%; }
+        .btn-export { background: var(--success); color: white; width: 100%; }
+        
+        .canvas-container { border: 4px solid #334155; border-radius: 8px; background: #000; overflow: hidden; line-height: 0; margin-top: 10px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
+        canvas { image-rendering: pixelated; max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+
+    <h1 style="font-size: 22px; margin-bottom: 20px; letter-spacing: 1px;">PIXEL TRANS <span style="font-size: 12px; opacity: 0.6;"> >-< </span></h1>
+
+    <div class="panel">
+        <button class="btn-import" onclick="document.getElementById('upload').click()">IMPORT 导入图片</button>
+        <input type="file" id="upload" hidden accept="image/*">
+
+        <div class="info-badge">
+            <span>像素宽度: <b id="resW">0</b></span>
+            <span>像素高度: <b id="resH">0</b></span>
+        </div>
+
+        <div class="palette-preview-container">
+            <div class="label-row"><span>当前颜色构成 (Color Swatch)</span><span id="colorCount">0 colors</span></div>
+            <div id="colorBar" class="color-preview-bar"></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchMode('color')">彩色色板 (COLOR)</button>
+            <button class="tab-btn" onclick="switchMode('gray')">灰度阶梯 (GRAY)</button>
+        </div>
+
+        <div id="colorTab" class="tab-content active">
+            <div class="palette-grid">
+                <button class="btn-palette active" onclick="setPalette('none', this)">Original</button>
+                <button class="btn-palette" onclick="setPalette('gb', this)">GameBoy</button>
+                <button class="btn-palette" onclick="setPalette('gbc', this)">GBC (Real)</button>
+                <button class="btn-palette" onclick="setPalette('ms', this)">Master System</button>
+                <button class="btn-palette" onclick="setPalette('nes', this)">NES</button>
+                <button class="btn-palette" onclick="setPalette('c64', this)">C64</button>
+                <button class="btn-palette" onclick="setPalette('cga', this)">CGA Mode 4</button>
+                <button class="btn-palette" onclick="setPalette('pico8', this)">PICO-8</button>
+                <button class="btn-palette" onclick="setPalette('jmp16', this)">JMP-16</button>
+                <button class="btn-palette" onclick="setPalette('aap64', this)">AAP-64</button>
+                <button class="btn-palette" onclick="setPalette('endesga32', this)">Endesga 32</button>
+                <button class="btn-palette" onclick="setPalette('sweetie16', this)">Sweetie 16</button>
+                <button class="btn-palette" onclick="setPalette('solarized', this)">Solarized</button>
+                <button class="btn-palette" onclick="setPalette('bw', this)">1-BIT BW</button>
+            </div>
+        </div>
+
+        <div id="grayTab" class="tab-content">
+            <div class="slider-group">
+                <div class="label-row"><span>灰度色阶数量</span><b id="grayLevelVal">4</b></div>
+                <input type="range" id="grayLevels" min="2" max="32" value="4" oninput="updateGrayLevel()">
+            </div>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">* 色阶数量</p>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 5px 0;">
+
+        <div class="slider-group">
+            <div class="label-row"><span>像素取样步长</span><b id="sizeVal">10</b></div>
+            <input type="range" id="pixelSize" min="2" max="64" value="10">
+        </div>
+
+        <div class="slider-group">
+            <div class="label-row"><span>抖动强度</span><b id="ditherVal">80%</b></div>
+            <input type="range" id="ditherStrength" min="0" max="100" value="80">
+        </div>
+
+        <div class="option-container">
+            <label class="option-row"><input type="checkbox" id="enableDither" checked onchange="process()"> <span>启用抖动</span></label>
+            <label class="option-row"><input type="checkbox" id="scanlines" onchange="process()"> <span>显示扫描线</span></label>
+        </div>
+
+        <div class="export-zone">
+            <div class="export-controls">
+                <select id="exportMode">
+                    <option value="preview">原图尺寸 (展示用)</option>
+                    <option value="pixel">1:1 纯像素图 (开发用)</option>
+                </select>
+<select id="exportScale">
+    <option value="10">1000% (10x)</option>
+    <option value="20">2000% (20x)</option>
+    <option value="30" selected>3000% (30x)</option>
+    <option value="40">4000% (40x)</option>
+    <option value="80">8000% (80x)</option>
+</select>
+            </div>
+            <button class="btn-export" onclick="exportImage()">DOWNLOAD / EXPORT</button>
+        </div>
+    </div>
+
+    <div class="canvas-container"><canvas id="canvas"></canvas></div>
+
+    <script>
+        const upload = document.getElementById('upload');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let originalImage = null;
+        let currentPalette = 'none';
+        let isGrayMode = false;
+
+        const palettes = {
+            gb: [[15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]],
+            gbc: [[40, 40, 40], [132, 56, 16], [16, 72, 128], [56, 112, 16], [168, 80, 16], [184, 160, 24], [224, 112, 16], [248, 208, 32], [48, 112, 176], [120, 152, 216], [248, 248, 248]],
+            ms: [[0,0,0], [255,255,255], [255,0,0], [0,255,255], [170,0,0], [0,170,170], [255,255,85], [85,255,255], [170,170,0], [0,170,0], [255,85,255], [85,255,85], [170,0,170], [0,0,170], [85,85,255], [170,170,170]],
+            nes: [[124,124,124], [0,0,252], [0,0,188], [68,40,188], [148,0,132], [168,0,32], [168,16,0], [136,20,0], [80,48,0], [0,120,0], [0,104,0], [0,88,0], [0,64,88], [0,0,0], [252,252,252], [164,228,252], [184,184,248], [216,184,248], [248,184,248], [248,164,192], [240,208,176], [252,224,168], [248,216,120], [216,248,120], [216,248,120], [184,248,184], [184,248,216], [0,252,252], [248,248,248]],
+            c64: [[0,0,0], [255,255,255], [136,0,0], [170,255,238], [204,68,204], [0,204,85], [0,0,170], [238,238,119], [221,136,85], [102,68,0], [255,119,119], [51,51,51], [119,119,119], [170,255,102], [0,136,255], [187,187,187]],
+            cga: [[0,0,0], [85,255,255], [255,85,255], [255,255,255]],
+            pico8: [[0,0,0], [29,43,83], [126,37,83], [0,135,81], [171,82,54], [95,87,79], [194,195,199], [255,241,232], [255,0,77], [255,163,0], [255,236,39], [0,228,54], [41,173,255], [131,118,156], [255,119,168], [255,204,170]],
+            jmp16: [[0,0,0], [34,32,52], [69,40,60], [102,57,49], [143,86,59], [223,113,38], [247,150,23], [238,195,154], [251,242,54], [153,229,80], [106,190,48], [55,148,110], [75,105,131], [91,110,225], [99,155,255], [172,182,190]],
+            aap64: [[6,6,8], [20,16,19], [37,24,26], [54,31,33], [81,44,40], [118,66,54], [155,93,67], [188,130,99], [235,188,141], [255,232,194], [209,170,44], [252,222,50], [255,255,126], [255,255,255], [116,147,59], [151,186,45], [214,233,37], [76,104,133], [82,147,175], [137,219,236], [49,54,56], [71,75,81], [103,106,115], [153,153,153], [194,194,194], [255,0,68], [255,82,119], [255,174,201], [172,50,50], [217,87,99], [215,123,186], [143,151,74], [138,111,48], [172,234,136], [102,57,49], [223,113,38], [75,105,131], [91,110,225], [99,155,255], [63,63,116], [55,148,110], [106,190,48], [153,229,80]],
+            endesga32: [[0,0,0], [19,19,19], [27,28,51], [22,46,70], [30,76,103], [35,149,142], [82,233,113], [197,255,82], [255,236,103], [255,158,70], [230,72,46], [171,44,45], [96,26,46], [53,19,41], [121,58,128], [201,82,142], [255,121,174], [255,201,201], [255,255,255], [194,195,199], [95,87,79], [131,118,156], [41,173,255], [0,135,81], [171,82,54], [126,37,83], [29,43,83]],
+            sweetie16: [[26,28,44], [93,39,93], [177,62,83], [239,125,87], [255,205,117], [167,240,112], [56,183,100], [37,113,121], [41,54,111], [59,93,201], [65,166,246], [115,239,247], [244,244,244], [148,176,194], [86,108,134], [51,60,87]],
+            solarized: [[0,43,54], [7,54,66], [88,110,117], [101,123,131], [131,148,150], [147,161,161], [238,232,213], [253,246,227], [181,137,0], [203,75,22], [220,50,47], [211,54,130], [108,113,196], [38,139,210], [42,161,152], [133,153,0]],
+            bw: [[0,0,0], [255,255,255]]
+        };
+
+        function switchMode(mode) {
+            isGrayMode = (mode === 'gray');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            if (isGrayMode) {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('grayTab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('colorTab').classList.add('active');
+            }
+            updateColorBar();
+            process();
+        }
+
+        function updateGrayLevel() {
+            document.getElementById('grayLevelVal').innerText = document.getElementById('grayLevels').value;
+            updateColorBar();
+            process();
+        }
+
+        function getGrayPalette() {
+            const levels = parseInt(document.getElementById('grayLevels').value);
+            const palette = [];
+            for (let i = 0; i < levels; i++) {
+                const val = Math.round((i / (levels - 1)) * 255);
+                palette.push([val, val, val]);
+            }
+            return palette;
+        }
+
+        function updateColorBar() {
+            const bar = document.getElementById('colorBar');
+            const countLabel = document.getElementById('colorCount');
+            bar.innerHTML = '';
+            let colors = [];
+            if (isGrayMode) {
+                colors = getGrayPalette();
+                countLabel.innerText = `${colors.length} gray levels`;
+            } else if (currentPalette === 'none') {
+                countLabel.innerText = "Original Spectrum";
+                bar.style.background = "linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)";
+                return;
+            } else {
+                colors = palettes[currentPalette];
+                countLabel.innerText = `${colors.length} colors`;
+            }
+            bar.style.background = "none";
+            colors.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'swatch';
+                swatch.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+                bar.appendChild(swatch);
+            });
+        }
+
+        function setPalette(type, btn) {
+            currentPalette = type;
+            document.querySelectorAll('.btn-palette').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateColorBar();
+            process();
+        }
+
+        upload.onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                originalImage = new Image();
+                originalImage.onload = process;
+                originalImage.src = ev.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        [document.getElementById('pixelSize'), document.getElementById('ditherStrength')].forEach(el => {
+            el.oninput = () => {
+                document.getElementById('sizeVal').innerText = document.getElementById('pixelSize').value;
+                document.getElementById('ditherVal').innerText = document.getElementById('ditherStrength').value + '%';
+                process();
+            };
+        });
+
+        function getNearestColor(r, g, b, palette) {
+            let minDistance = Infinity;
+            let closest = palette[0];
+            for (const color of palette) {
+                const dist = (r-color[0])**2 * 0.299 + (g-color[1])**2 * 0.587 + (b-color[2])**2 * 0.114;
+                if (dist < minDistance) { minDistance = dist; closest = color; }
+            }
+            return closest;
+        }
+
+        function renderToCanvas(targetCanvas, isMiniPixel) {
+            if (!originalImage) return;
+            const size = parseInt(document.getElementById('pixelSize').value);
+            const ditherStr = parseInt(document.getElementById('ditherStrength').value) / 100;
+            const useDither = document.getElementById('enableDither').checked;
+            const useScanlines = document.getElementById('scanlines').checked;
+            const tCtx = targetCanvas.getContext('2d');
+            const cols = Math.ceil(originalImage.width / size);
+            const rows = Math.ceil(originalImage.height / size);
+            document.getElementById('resW').innerText = cols;
+            document.getElementById('resH').innerText = rows;
+            targetCanvas.width = isMiniPixel ? cols : originalImage.width;
+            targetCanvas.height = isMiniPixel ? rows : originalImage.height;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = cols;
+            tempCanvas.height = rows;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(originalImage, 0, 0, cols, rows);
+            const imgDataObj = tempCtx.getImageData(0, 0, cols, rows);
+            const data = imgDataObj.data;
+            let targetPal = isGrayMode ? getGrayPalette() : (currentPalette === 'none' ? null : palettes[currentPalette]);
+            if (isGrayMode) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+                    data[i] = data[i+1] = data[i+2] = gray;
+                }
+            }
+            if (useDither && targetPal) {
+                for (let y = 0; y < rows; y++) {
+                    for (let x = 0; x < cols; x++) {
+                        const i = (y * cols + x) * 4;
+                        const oldR = data[i], oldG = data[i+1], oldB = data[i+2];
+                        const [newR, newG, newB] = getNearestColor(oldR, oldG, oldB, targetPal);
+                        data[i] = newR; data[i+1] = newG; data[i+2] = newB;
+                        const errR = (oldR - newR) * ditherStr;
+                        const errG = (oldG - newG) * ditherStr;
+                        const errB = (oldB - newB) * ditherStr;
+                        distributeError(data, cols, rows, x + 1, y,      errR, errG, errB, 7/16);
+                        distributeError(data, cols, rows, x - 1, y + 1, errR, errG, errB, 3/16);
+                        distributeError(data, cols, rows, x,     y + 1, errR, errG, errB, 5/16);
+                        distributeError(data, cols, rows, x + 1, y + 1, errR, errG, errB, 1/16);
+                    }
+                }
+            } else if (targetPal) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const [nr, ng, nb] = getNearestColor(data[i], data[i+1], data[i+2], targetPal);
+                    data[i] = nr; data[i+1] = ng; data[i+2] = nb;
+                }
+            }
+            if (isMiniPixel) {
+                tCtx.putImageData(imgDataObj, 0, 0);
+            } else {
+                tCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+                for (let y = 0; y < rows; y++) {
+                    for (let x = 0; x < cols; x++) {
+                        const i = (y * cols + x) * 4;
+                        tCtx.fillStyle = `rgb(${data[i]},${data[i+1]},${data[i+2]})`;
+                        tCtx.fillRect(x * size, y * size, size, size);
+                    }
+                }
+                if (useScanlines) {
+                    tCtx.fillStyle = `rgba(0,0,0,0.4)`;
+                    for (let y = 0; y < targetCanvas.height; y += size) {
+                        tCtx.fillRect(0, y + (size - 1), targetCanvas.width, 1);
+                    }
+                }
+            }
+        }
+
+        function distributeError(data, w, h, x, y, er, eg, eb, weight) {
+            if (x < 0 || x >= w || y < 0 || y >= h) return;
+            const i = (y * w + x) * 4;
+            data[i] = Math.min(255, Math.max(0, data[i] + er * weight));
+            data[i+1] = Math.min(255, Math.max(0, data[i+1] + eg * weight));
+            data[i+2] = Math.min(255, Math.max(0, data[i+2] + eb * weight));
+        }
+
+        function process() { renderToCanvas(canvas, false); }
+
+        function exportImage() {
+            if (!originalImage) return;
+            const mode = document.getElementById('exportMode').value;
+            const scale = parseInt(document.getElementById('exportScale').value);
+            
+            // 创建中间处理画布以获取像素数据
+            const tempProcessCanvas = document.createElement('canvas');
+            renderToCanvas(tempProcessCanvas, true); // 获取 1:1 的像素图
+            
+            const exportCanvas = document.createElement('canvas');
+            const eCtx = exportCanvas.getContext('2d');
+            
+            if (mode === 'pixel') {
+                // 1:1 纯像素图导出，应用放大倍数
+                exportCanvas.width = tempProcessCanvas.width * scale;
+                exportCanvas.height = tempProcessCanvas.height * scale;
+                eCtx.imageSmoothingEnabled = false; // 关键：禁用平滑，保持硬边
+                eCtx.drawImage(tempProcessCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+            } else {
+                // 预览图导出，应用放大倍数
+                const previewCanvas = document.createElement('canvas');
+                renderToCanvas(previewCanvas, false);
+                exportCanvas.width = previewCanvas.width * scale;
+                exportCanvas.height = previewCanvas.height * scale;
+                eCtx.imageSmoothingEnabled = false;
+                eCtx.drawImage(previewCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+            }
+            
+            const link = document.createElement('a');
+            link.download = `pixel-art-${Date.now()}.png`;
+            link.href = exportCanvas.toDataURL();
+            link.click();
+        }
+
+        updateColorBar();
+    </script>
+</body>
+</html>

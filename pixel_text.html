@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>像素文字转换器 Pro - 带导出功能</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --primary: #6366f1; --bg: #0f172a; --card: #1e293b; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #f8fafc; padding: 20px; margin: 0; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .panel { background: var(--card); padding: 20px; border-radius: 12px; display: grid; 
+                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; border: 1px solid #334155; }
+        
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
+        
+        .info-bar { background: #0f172a; padding: 10px; border-radius: 8px; margin: 15px 0; font-size: 13px; color: #10b981; border: 1px solid #334155; }
+
+        /* 输出区域 */
+        #capture-area { 
+            padding: 40px; 
+            background: #1e293b; 
+            display: flex; 
+            justify-content: center; 
+            overflow: auto; 
+            border-radius: 12px;
+            min-height: 200px;
+        }
+
+        #output { 
+            white-space: pre; 
+            font-family: "Courier New", Courier, monospace; 
+            line-height: 0.8; 
+            letter-spacing: 0px; 
+            background: #000; 
+            display: inline-block; 
+            padding: 10px;
+            /* 默认字体粗细 */
+            font-weight: 400; 
+        }
+        
+        canvas { display: none; }
+        input, select { background: #0f172a; border: 1px solid #475569; color: white; padding: 8px; border-radius: 4px; }
+        
+        .btn-group { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-generate { background: var(--primary); color: white; }
+        .btn-export { background: #10b981; color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { background: #475569; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 style="font-size: 20px; margin: 0;">PIXEL TEXT STUDIO</h1>
+    </div>
+
+    <div class="panel">
+        <div class="control-group">
+            <label>1. 上传图片</label>
+            <input type="file" id="imageInput" accept="image/*">
+        </div>
+        <div class="control-group">
+            <label>2. 填充文字</label>
+            <input type="text" id="charInput" value="8">
+        </div>
+        <div class="control-group">
+            <label>3. 字体粗细</label>
+            <select id="weightInput">
+                <option value="100">极细 (Thin)</option>
+                <option value="400" selected>常规 (Normal)</option>
+                <option value="700">粗体 (Bold)</option>
+                <option value="900">极粗 (Black)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>4. 背景颜色</label>
+            <input type="color" id="bgColorInput" value="#000000">
+        </div>
+        <div class="control-group">
+            <label>5. 字距 (<span id="valSpacing">0</span>px)</label>
+            <input type="range" id="spacingInput" min="-5" max="10" value="0">
+        </div>
+        <div class="control-group">
+            <label>6. 行高 (<span id="valLineHeight">0.8</span>)</label>
+            <input type="range" id="lineHeightInput" min="0.1" max="1.5" step="0.05" value="0.8">
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-generate" onclick="processImage()">生成字符阵列</button>
+            <button class="btn btn-export" id="exportBtn" onclick="exportToImage()" disabled>导出为图片 (PNG)</button>
+        </div>
+    </div>
+
+    <div class="info-bar">
+        状态: <span id="status">等待上传图片</span> | 
+        规模: <b id="statW">0</b> x <b id="statH">0</b> 像素
+    </div>
+
+    <div id="capture-area">
+        <div id="output">预览区域</div>
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const imageInput = document.getElementById('imageInput');
+    const charInput = document.getElementById('charInput');
+    const weightInput = document.getElementById('weightInput');
+    const bgColorInput = document.getElementById('bgColorInput');
+    const spacingInput = document.getElementById('spacingInput');
+    const lineHeightInput = document.getElementById('lineHeightInput');
+    const output = document.getElementById('output');
+    const exportBtn = document.getElementById('exportBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 实时联动
+    weightInput.onchange = () => output.style.fontWeight = weightInput.value;
+    bgColorInput.oninput = () => output.style.backgroundColor = bgColorInput.value;
+    spacingInput.oninput = () => {
+        output.style.letterSpacing = spacingInput.value + 'px';
+        document.getElementById('valSpacing').innerText = spacingInput.value;
+    };
+    lineHeightInput.oninput = () => {
+        output.style.lineHeight = lineHeightInput.value;
+        document.getElementById('valLineHeight').innerText = lineHeightInput.value;
+    };
+
+    function processImage() {
+        const file = imageInput.files[0];
+        if (!file) return alert("请先选择图片");
+
+        document.getElementById('status').innerText = "处理中...";
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                document.getElementById('statW').innerText = img.width;
+                document.getElementById('statH').innerText = img.height;
+
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                const userChars = charInput.value.split('') || [" "];
+                let html = "";
+                let charCounter = 0;
+
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = (y * canvas.width + x) * 4;
+                        const r = imageData[idx];
+                        const g = imageData[idx + 1];
+                        const b = imageData[idx + 2];
+                        const a = imageData[idx + 3] / 255;
+
+                        const char = userChars[charCounter % userChars.length];
+                        const colorStr = a < 0.01 ? `transparent` : `rgba(${r},${g},${b},${a})`;
+                        
+                        html += `<span style="color:${colorStr}">${char}</span>`;
+                        charCounter++;
+                    }
+                    html += "\n";
+                }
+                
+                output.innerHTML = html;
+                
+                // 应用样式
+                output.style.backgroundColor = bgColorInput.value;
+                output.style.fontWeight = weightInput.value;
+                output.style.letterSpacing = spacingInput.value + 'px';
+                output.style.lineHeight = lineHeightInput.value;
+                
+                exportBtn.disabled = false;
+                document.getElementById('status').innerText = "生成成功";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 核心功能：导出图片
+    async function exportToImage() {
+        const btn = document.querySelector('.btn-export');
+        btn.innerText = "正在渲染...";
+        btn.disabled = true;
+
+        try {
+            // 使用 html2canvas 捕获 output 元素
+            // scale: 2 可以增加导出图片的清晰度
+            const canvasResult = await html2canvas(output, {
+                backgroundColor: null, 
+                scale: 2,
+                logging: false,
+                useCORS: true
+            });
+
+            const link = document.createElement('a');
+            link.download = `pixel-text-art-${Date.now()}.png`;
+            link.href = canvasResult.toDataURL("image/png");
+            link.click();
+            
+            document.getElementById('status').innerText = "导出完成";
+        } catch (err) {
+            console.error(err);
+            alert("导出失败，请尝试减小图片尺寸");
+        } finally {
+            btn.innerText = "导出为图片 (PNG)";
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
