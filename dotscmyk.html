@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CMYK Halftone Lab - Advanced Pro</title>
+    <style>
+        :root {
+            --bg-color: #b3b3b4; 
+            --panel-bg: #5c73db; 
+            --accent: #593ba5;   
+            --text: #130915;
+            --white: #eae8e8;
+            /* Channel Colors */
+            --cyan: #00ffff;
+            --magenta: #ff00ff;
+            --yellow: #ffff00;
+            --black: #000000;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            color: var(--text); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 40px; 
+        }
+
+        .container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+
+        .canvas-container {
+            background: var(--white);
+            padding: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            min-width: 400px;
+            min-height: 300px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        canvas { max-width: 100%; height: auto; }
+
+        .panel { 
+            background: var(--panel-bg); 
+            padding: 25px; border-radius: 15px; 
+            width: 320px; box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+
+        h3 { margin-top: 0; font-size: 18px; color: var(--text); border-bottom: 1px solid #c9c6c1; padding-bottom: 10px; }
+        
+        .control-group { margin-bottom: 20px; }
+        label { display: block; font-size: 12px; margin-bottom: 8px; color: #210f0f; font-weight: 600; text-transform: uppercase; }
+        
+        input[type="range"] { 
+            width: 100%; height: 4px; background: #c9c6c1; border-radius: 5px; 
+            outline: none; -webkit-appearance: none; margin-bottom: 12px;
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; 
+        }
+
+        /* CMYK Slider Colors */
+        #str_c::-webkit-slider-runnable-track { background: var(--cyan); height: 4px; border-radius: 5px; }
+        #str_m::-webkit-slider-runnable-track { background: var(--magenta); height: 4px; border-radius: 5px; }
+        #str_y::-webkit-slider-runnable-track { background: var(--yellow); height: 4px; border-radius: 5px; }
+        #str_k::-webkit-slider-runnable-track { background: var(--black); height: 4px; border-radius: 5px; }
+
+        select { 
+            width: 100%; padding: 8px; background: var(--white); border: 1px solid #c9c6c1; 
+            color: var(--text); border-radius: 6px; outline: none; margin-bottom: 10px;
+        }
+
+        .btn { 
+            display: block; width: 100%; padding: 12px; margin-top: 10px;
+            text-align: center; border-radius: 8px; cursor: pointer; 
+            font-weight: bold; border: none; transition: 0.3s;
+        }
+        .btn-import { background: var(--accent); color: white; }
+        .btn-export { background: #b0a496; color: white; margin-top: 20px; }
+        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        
+        #fileInput { display: none; }
+        .val { float: right; font-weight: normal; color: #fff; background: rgba(0,0,0,0.2); padding: 0 5px; border-radius: 3px; }
+        .empty-hint { color: #555; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="canvas-container" id="canvasBox">
+            <p class="empty-hint">Please import an image to start</p>
+            <canvas id="mainCanvas" style="display:none"></canvas>
+        </div>
+
+        <div class="panel">
+            <h3>Dashboard</h3>
+            
+            <div class="control-group">
+                <label for="fileInput" class="btn btn-import">📂 Import Image</label>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+
+            <div class="control-group">
+                <label>Blend Mode</label>
+                <select id="blendMode">
+                    <option value="multiply">Multiply (Authentic Print)</option>
+                    <option value="source-over">Normal (Opaque)</option>
+                    <option value="overlay">Overlay (High Contrast)</option>
+                    <option value="screen">Screen (Lighten)</option>
+                    <option value="color-burn">Color Burn (Deepen)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Dot Shape</label>
+                <select id="shapeMode">
+                    <option value="circle">Circle</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="line">Line</option>
+                    <option value="square">Square</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Spacing <span class="val" id="v_spacing">10</span></label>
+                <input type="range" id="spacing" min="3" max="40" value="10">
+                
+                <label>Max Scale <span class="val" id="v_maxScale">1.2</span></label>
+                <input type="range" id="maxScale" min="0.5" max="3.0" step="0.1" value="1.2">
+
+                <label>Registration Offset <span class="val" id="v_offset">0</span></label>
+                <input type="range" id="offset" min="0" max="15" step="0.5" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>CMYK Intensity</label>
+                <input type="range" id="str_c" min="0" max="200" value="100">
+                <input type="range" id="str_m" min="0" max="200" value="100">
+                <input type="range" id="str_y" min="0" max="200" value="100">
+                <input type="range" id="str_k" min="0" max="200" value="100">
+            </div>
+
+            <div class="control-group">
+                <label>Global Rotation <span class="val" id="v_baseAngle">0°</span></label>
+                <input type="range" id="baseAngle" min="0" max="90" value="0">
+            </div>
+
+            <button class="btn btn-export" id="downloadBtn">💾 Save Result</button>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const fileInput = document.getElementById('fileInput');
+const canvasBox = document.getElementById('canvasBox');
+const emptyHint = canvasBox.querySelector('.empty-hint');
+let img = null;
+
+fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        img = new Image();
+        img.onload = () => {
+            canvas.style.display = 'block';
+            emptyHint.style.display = 'none';
+            render();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+function rgbToCmyk(r, g, b) {
+    let c = 1 - (r / 255);
+    let m = 1 - (g / 255);
+    let y = 1 - (b / 255);
+    let k = Math.min(c, m, y);
+    if (k === 1) return { c: 0, m: 0, y: 0, k: 1 };
+    
+    const getS = (id) => document.getElementById(id).value / 100;
+    return {
+        c: ((c - k) / (1 - k)) * getS('str_c'),
+        m: ((m - k) / (1 - k)) * getS('str_m'),
+        y: ((y - k) / (1 - k)) * getS('str_y'),
+        k: k * getS('str_k')
+    };
+}
+
+function render() {
+    if (!img) return;
+
+    const spacing = parseInt(document.getElementById('spacing').value);
+    const shapeMode = document.getElementById('shapeMode').value;
+    const blendMode = document.getElementById('blendMode').value;
+    const maxScale = parseFloat(document.getElementById('maxScale').value);
+    const baseAngle = parseInt(document.getElementById('baseAngle').value);
+    const offsetVal = parseFloat(document.getElementById('offset').value);
+    
+    document.getElementById('v_spacing').innerText = spacing;
+    document.getElementById('v_maxScale').innerText = maxScale;
+    document.getElementById('v_baseAngle').innerText = baseAngle + '°';
+    document.getElementById('v_offset').innerText = offsetVal;
+
+    const maxW = 800, maxH = 600;
+    const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = canvas.width; tCanvas.height = canvas.height;
+    const tCtx = tCanvas.getContext('2d');
+    tCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const pixels = tCtx.getImageData(0, 0, tCanvas.width, tCanvas.height).data;
+
+    ctx.fillStyle = '#f4f1ea'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const channels = [
+        { name: 'c', color: '#00ffff', angle: 15 + baseAngle, ox: -offsetVal, oy: -offsetVal },
+        { name: 'm', color: '#ff00ff', angle: 75 + baseAngle, ox: offsetVal, oy: -offsetVal },
+        { name: 'y', color: '#ffff00', angle: 0 + baseAngle, ox: -offsetVal, oy: offsetVal },
+        { name: 'k', color: '#000000', angle: 45 + baseAngle, ox: 0, oy: 0 }
+    ];
+
+    channels.forEach(ch => {
+        ctx.save();
+        ctx.globalCompositeOperation = blendMode; 
+        ctx.fillStyle = ch.color;
+
+        for (let y = 0; y < canvas.height; y += spacing) {
+            for (let x = 0; x < canvas.width; x += spacing) {
+                const i = (Math.floor(y) * Math.floor(canvas.width) + Math.floor(x)) * 4;
+                if (i >= pixels.length) continue;
+
+                const cmyk = rgbToCmyk(pixels[i], pixels[i+1], pixels[i+2]);
+                const value = cmyk[ch.name];
+                if (value <= 0.05) continue;
+
+                const size = value * (spacing / 2) * maxScale;
+
+                ctx.save();
+                ctx.translate(x + ch.ox, y + ch.oy);
+                ctx.rotate(ch.angle * Math.PI / 180);
+
+                ctx.beginPath();
+                if(shapeMode === 'circle') ctx.arc(0, 0, size, 0, Math.PI * 2);
+                else if(shapeMode === 'diamond') {
+                    ctx.moveTo(0, -size * 1.3); ctx.lineTo(size * 1.3, 0);
+                    ctx.lineTo(0, size * 1.3); ctx.lineTo(-size * 1.3, 0); ctx.closePath();
+                }
+                else if(shapeMode === 'square') ctx.rect(-size, -size, size * 2, size * 2);
+                else if(shapeMode === 'line') ctx.rect(-spacing/2, -size/2, spacing, size);
+                
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        ctx.restore();
+    });
+}
+
+document.getElementById('downloadBtn').onclick = () => {
+    if (!img) return alert("Please upload an image first.");
+    const link = document.createElement('a');
+    link.download = 'cmyk_halftone_print.png';
+    link.href = canvas.toDataURL('image/png', 1.0);
+    link.click();
+};
+
+document.querySelectorAll('input, select').forEach(el => el.oninput = render);
+</script>
+</body>
+</html>
