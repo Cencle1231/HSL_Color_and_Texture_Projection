@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -52,7 +53,7 @@
             -webkit-mask-size: cover;
             mask-size: cover;
             -webkit-mask-position: center;
-            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4) 0%, transparent 10%);
+            background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 10%);
             background-size: 10px 10px;
             opacity: 0;
             animation: sparkle-pulse 4s ease-in-out infinite;
@@ -60,13 +61,31 @@
         }
 
         @keyframes background-breath {
-            0%, 100% { opacity: 0.7; filter: brightness(1); }
-            50% { opacity: 1; filter: brightness(1.2); }
+
+            0%,
+            100% {
+                opacity: 0.7;
+                filter: brightness(1);
+            }
+
+            50% {
+                opacity: 1;
+                filter: brightness(1.2);
+            }
         }
 
         @keyframes sparkle-pulse {
-            0%, 100% { opacity: 0; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.02); }
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.02);
+            }
         }
 
         header {
@@ -99,8 +118,15 @@
         }
 
         @keyframes subtle-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
         }
 
         .title-group {
@@ -155,7 +181,7 @@
             border-color: var(--accent-blue);
             transform: translateY(-4px);
             background: rgba(30, 30, 35, 0.9);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
         }
 
         .card-tag {
@@ -198,13 +224,15 @@
             filter: drop-shadow(0 0 8px rgba(175, 82, 222, 0.5));
             margin-bottom: 10px;
             opacity: 0.8;
-            cursor: pointer; /* 增加手型，提示可点击 */
+            cursor: pointer;
+            /* 增加手型，提示可点击 */
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             user-select: none;
         }
 
         .footer-paw:active {
-            transform: scale(0.8); /* 点击反馈 */
+            transform: scale(0.8);
+            /* 点击反馈 */
         }
 
         .meow-rain {
@@ -216,26 +244,61 @@
             font-weight: bold;
             white-space: nowrap;
             animation: meow-fall linear forwards;
-            text-shadow: 0 0 10px currentColor; /* 增加发光感，匹配背景纹理 */
+            text-shadow: 0 0 10px currentColor;
+            /* 增加发光感，匹配背景纹理 */
         }
 
         @keyframes meow-fall {
-            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(110vh) rotate(20deg); opacity: 0; }
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(110vh) rotate(20deg);
+                opacity: 0;
+            }
         }
 
         @media (max-width: 480px) {
-            header { padding: 40px 10px; }
-            h2 { font-size: 13px; letter-spacing: 4px; }
-            .logo { width: 48px; }
-            .header-container { gap: 12px; padding: 15px 20px; width: 90%; }
-            .grid { grid-template-columns: 1fr; }
-            .footer-paw { width: 40px; }
+            header {
+                padding: 40px 10px;
+            }
+
+            h2 {
+                font-size: 13px;
+                letter-spacing: 4px;
+            }
+
+            .logo {
+                width: 48px;
+            }
+
+            .header-container {
+                gap: 12px;
+                padding: 15px 20px;
+                width: 90%;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-paw {
+                width: 40px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -272,28 +335,35 @@
             <div class="card-title">BERRYMIX</div>
             <div class="card-desc">色卡生成。</div>
         </a>
-                <a href="pixel_trans.html" class="card">
+        <a href="pixel_trans.html" class="card">
             <span class="card-tag">Pixel Art</span>
             <div class="card-title">PIXEL TRANS</div>
             <div class="card-desc">像素滤镜。</div>
         </a>
-                       <a href="pixel_text.html" class="card">
+        <a href="pixel_text.html" class="card">
             <span class="card-tag">Pixel Art</span>
             <div class="card-title">PIXEL TEXT</div>
             <div class="card-desc">像素转文字。</div>
         </a>
-                </a>
-                       <a href="dots.html" class="card">
+        </a>
+        <a href="dots.html" class="card">
             <span class="card-tag">Half Tone</span>
             <div class="card-title">DOTS</div>
             <div class="card-desc">网点。</div>
         </a>
-                        </a>
-                       <a href="dotscmyk.html" class="card">
+        </a>
+        <a href="dotscmyk.html" class="card">
             <span class="card-tag">Half Tone</span>
             <div class="card-title">CMYK DOTS</div>
             <div class="card-desc">网点，CMYK偏移。</div>
         </a>
+            </a>
+        <a href="riso.html" class="card">
+            <span class="card-tag">Half Tone</span>
+            <div class="card-title">RISO</div>
+            <div class="card-desc">多油墨RISO印刷。</div>
+        </a>
+
     </div>
 
     <footer>
@@ -304,7 +374,7 @@
     <script>
         const paw = document.getElementById('pawBtn');
         const meows = ['(=^･ω･^=)', '(ﾐ´ω`ﾐ)', '(=^-ω-^=)', '(=; ｪ ;) ', '(=^‥^=)', '(^・ω・^ )', 'ฅ^•ﻌ•^ฅ', '(=ↀωↀ=)'];
-        
+
         // 获取CSS变量中的颜色
         const colors = ['#87CEEB', '#AF52DE', '#E0E0E0', '#555555'];
 
@@ -330,7 +400,7 @@
         function createMeow() {
             const el = document.createElement('div');
             el.className = 'meow-rain';
-            
+
             // 随机属性
             const text = meows[Math.floor(Math.random() * meows.length)];
             const color = colors[Math.floor(Math.random() * colors.length)];
@@ -343,7 +413,7 @@
             el.style.color = color;
             el.style.fontSize = fontSize + 'px';
             el.style.animationDuration = fallSpeed + 's';
-            
+
             document.body.appendChild(el);
 
             // 动画执行完移除DOM
@@ -354,4 +424,5 @@
     </script>
 
 </body>
+
 </html>
