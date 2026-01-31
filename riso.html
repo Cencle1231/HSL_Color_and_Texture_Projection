@@ -133,7 +133,19 @@
                 <span style="font-size: 12px; margin-left:15px">网点密度: <input type="range" id="gridIn" min="2" max="18"
                         value="6" style="width:500px; vertical-align:middle"></span>
             </div>
-            <button onclick="saveCanvas('riso_art_ryb','png')">导出作品</button>
+<div style="display: flex; gap: 8px; align-items: center;">
+    <button onclick="saveCanvas('riso_art_ryb','png')">导出作品</button>
+    <select id="presetList" style="width:120px; height:32px; font-size:12px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+        <option value="">-- 我的预设 --</option>
+    </select>
+    <button onclick="saveNewPreset()" style="background: #666; padding: 5px 12px; font-size:12px;">保存</button>
+    <button onclick="deletePreset()" style="background: #666; padding: 5px 12px; font-size:12px;">删除</button>
+    <button onclick="downloadPresetFile()" style="background: #333; padding: 5px 12px; font-size:12px;">导出JSON</button>
+    <button onclick="document.getElementById('presetInput').click()" style="background: #333; padding: 5px 12px; font-size:12px;">导入JSON</button>
+    <input type="file" id="presetInput" accept=".json" style="display:none">
+    <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+    
+</div>            
         </div>
 
         <div class="layers-container" id="layersHost">
@@ -148,6 +160,7 @@
     <option value="#1AF4FF">Fluorescent Blue (荧光青)</option>
     <option value="#FF355E">Fluorescent Red (荧光红/极光红)</option> 
     <option value="#BD00FF">Electric Violet (荧光紫/电子紫)</option> 
+<option value="#0045FF">International Klein Blue (克莱因蓝)</option>
     </optgroup>
 
     /* 暖色及经典系列 */
@@ -175,7 +188,7 @@
 
        /* 基础系列 */
        <optgroup label="基础系列 (Base)">
-    <option value="#000000" selected>Black (黑)</option>
+    <option value="#000000" >Black (黑)</option>
     <option value="#451910" >Choco (巧克力色)</option>
     <option value="#ffffff">White (纯白)</option>
 </optgroup>
@@ -250,7 +263,7 @@
         <option value="cmyk_k">黑色通道 (Key/Black)</option>
     </optgroup>
     <optgroup label="光影通道">
-        <option value="dark">深色阴影 selected</option>
+        <option value="dark">深色阴影 </option>
         <option value="light">浅色亮部</option>
     </optgroup>
     <optgroup label="橙色分色">
@@ -267,7 +280,7 @@
 </optgroup>
 
 </select>
-                                <input type="range" id="s${i}" min="0.5" max="3.0" step="0.1" value="1.6">
+                                <input type="range" id="s${i}" min="0.2" max="3.0" step="0.1" value="0.8">
                             </div>
                         </div>
                         <div class="ctrl-group">
@@ -308,7 +321,21 @@
                     loop();
                 });
             });
-            document.getElementById('imgInput').addEventListener('change', handleFile);
+document.getElementById('imgInput').addEventListener('change', handleFile);
+
+            // 新增：预设下拉菜单监听
+            document.getElementById('presetList').addEventListener('change', (e) => {
+                const name = e.target.value;
+                const library = JSON.parse(localStorage.getItem('risoLibrary') || '{}');
+                if (library[name]) {
+                    applyDataToUI(library[name]);
+                    loop();
+                }
+            });
+            // 新增：文件导入监听
+            document.getElementById('presetInput').addEventListener('change', handleImport);
+            // 初始化刷新菜单
+            updatePresetMenu();            
             noLoop();
         }
 
@@ -456,6 +483,117 @@ pop();
 
 // 这一行极其重要：强制重置全局状态，否则下一层渲染会乱码
 blendMode(BLEND);
+        }
+        // --- 预设管理核心逻辑 ---
+
+        // 刷新下拉列表
+        function updatePresetMenu() {
+            const menu = document.getElementById('presetList');
+            const library = JSON.parse(localStorage.getItem('risoLibrary') || '{}');
+            menu.innerHTML = '<option value="">-- 我的预设 --</option>';
+            for (let name in library) {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                menu.appendChild(opt);
+            }
+        }
+
+        // 保存当前参数到列表
+        function saveNewPreset() {
+            let name = prompt("给预设起个名字:", "新风格 " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            if (!name) return;
+            const library = JSON.parse(localStorage.getItem('risoLibrary') || '{}');
+            library[name] = packUIData();
+            localStorage.setItem('risoLibrary', JSON.stringify(library));
+            updatePresetMenu();
+            document.getElementById('presetList').value = name;
+        }
+
+        // 核心：打包 UI 数据
+        function packUIData() {
+            let data = {
+                gridSize: document.getElementById('gridIn').value,
+                bgColor: document.getElementById('bgColorIn').value,
+                layers: []
+            };
+            for (let i = 1; i <= 6; i++) {
+                data.layers.push({
+                    en: document.getElementById('en' + i).checked,
+                    m: document.getElementById('m' + i).value,
+                    c: document.getElementById('c' + i).value,
+                    a: document.getElementById('a' + i).value,
+                    ch: document.getElementById('ch' + i).value,
+                    s: document.getElementById('s' + i).value,
+                    t: document.getElementById('t' + i).value,
+                    x: document.getElementById('x' + i).value,
+                    y: document.getElementById('y' + i).value,
+                    rot: document.getElementById('rot' + i).value,
+                    def: document.getElementById('def' + i).value
+                });
+            }
+            return data;
+        }
+
+        // 核心：将数据还原到 UI
+        function applyDataToUI(data) {
+            document.getElementById('gridIn').value = data.gridSize;
+            if(data.bgColor) document.getElementById('bgColorIn').value = data.bgColor;
+            data.layers.forEach((l, idx) => {
+                let i = idx + 1;
+                document.getElementById('en' + i).checked = l.en;
+                document.getElementById('m' + i).value = l.m;
+                document.getElementById('c' + i).value = l.c;
+                document.getElementById('a' + i).value = l.a;
+                document.getElementById('ch' + i).value = l.ch;
+                document.getElementById('s' + i).value = l.s;
+                document.getElementById('t' + i).value = l.t;
+                document.getElementById('x' + i).value = l.x;
+                document.getElementById('y' + i).value = l.y;
+                if(document.getElementById('rot'+i)) document.getElementById('rot'+i).value = l.rot || 0;
+                if(document.getElementById('def'+i)) document.getElementById('def'+i).value = l.def || 1;
+                document.getElementById('box' + i).classList.toggle('disabled', !l.en);
+            });
+        }
+
+        // 删除选中的预设
+        function deletePreset() {
+            const name = document.getElementById('presetList').value;
+            if (!name) return;
+            if (confirm(`确定要删除 "${name}" 吗？`)) {
+                const library = JSON.parse(localStorage.getItem('risoLibrary') || '{}');
+                delete library[name];
+                localStorage.setItem('risoLibrary', JSON.stringify(library));
+                updatePresetMenu();
+            }
+        }
+
+        // 导出 JSON 文件
+        function downloadPresetFile() {
+            const name = document.getElementById('presetList').value;
+            if (!name) { alert("请先选择一个预设"); return; }
+            const library = JSON.parse(localStorage.getItem('risoLibrary') || '{}');
+            const blob = new Blob([JSON.stringify(library[name], null, 2)], {type: "application/json"});
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `riso_${name}.json`;
+            a.click();
+        }
+
+        // 导入 JSON 文件
+        function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    applyDataToUI(data);
+                    alert("已加载外部参数，点“保存”可存入列表");
+                    loop();
+                } catch(err) { alert("文件解析错误"); }
+            };
+            reader.readAsText(file);
         }
     </script>
 </body>
