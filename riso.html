@@ -140,6 +140,7 @@
             <script>
                 const risoColors = `
     /* 荧光及高亮系列 */
+    <optgroup label="荧光及高亮系列 (Fluorescent)">
     <option value="#ff48b0">Fluorescent Pink (荧光粉)</option>
     <option value="#fff000">Fluorescent Yellow (荧光黄)</option>
     <option value="#ffb000">Fluorescent Orange (荧光橙)</option>
@@ -147,15 +148,20 @@
     <option value="#1AF4FF">Fluorescent Blue (荧光青)</option>
     <option value="#FF355E">Fluorescent Red (荧光红/极光红)</option> 
     <option value="#BD00FF">Electric Violet (荧光紫/电子紫)</option> 
-    
+    </optgroup>
+
     /* 暖色及经典系列 */
+    <optgroup label="暖色及经典系列 (Warm)">
     <option value="#FF7300">Bright Orange (亮橘)</option>
     <option value="#ff6c2f">Bright Red (鲜红)</option>
     <option value="#ffe800">Yellow (黄)</option>
     <option value="#b1905a">Copper / Gold (金属铜金)</option>
     <option value="#6e1e2d">Burgundy (酒红)</option>
+    </optgroup>
+
     
-    /* 冷色及清新系列 */
+    /* 冷色系列 */
+    <optgroup label="冷色系列 (Cool)">
     <option value="#82d8d5">Mint (薄荷绿)</option>
     <option value="#00a95c">Green (绿)</option>
     <option value="#005d43">Hunter Green (猎人绿)</option>
@@ -163,20 +169,40 @@
     <option value="#40c1ff">Sky Blue (天蓝)</option>
     <option value="#6488ea">Cornflower (矢车菊蓝)</option>
     <option value="#0078bf">Risofederal Blue (联邦蓝)</option>
+        <option value="#765ba7">Purple (紫色)</option>
+    <option value="#665780">Grape (葡萄紫)</option>
+    </optgroup>
+
        /* 基础系列 */
+       <optgroup label="基础系列 (Base)">
     <option value="#000000" selected>Black (黑)</option>
     <option value="#451910" >Choco (巧克力色)</option>
     <option value="#ffffff">White (纯白)</option>
-    /* 紫色及复古系列 */
-    <option value="#765ba7">Purple (紫色)</option>
-    <option value="#665780">Grape (葡萄紫)</option>
-    <option value="#d6b4fc">Lavender (浅紫色/熏衣草)</option>
+</optgroup>
+
+    /* 复古系列 */
+    <optgroup label="复古系列 (Vintage)">
     <option value="#f5a18d">Apricot (杏黄 - 肤色)</option>
 <option value="#5f8289">Smoky Teal (烟熏青 - 灰)</option>
 <option value="#e5483f">Crimson (深红 - 复古海报)</option>
 <option value="#bb8b41">Flat Gold (哑光金 - 绘本风)</option>
+</optgroup>
+
+<optgroup label="清新粉彩系列 (Pastel Complete)">
+        <option value="#fdf2c4">Eggshell (蛋壳黄 - 奶油色/极浅黄)</option>
+        <option value="#ffda52">Sunflower (向日葵黄 - 暖亮黄)</option>
+        <option value="#ffd1dc">Shell Pink (贝壳粉 - 极浅暖粉)</option>
+        <option value="#fb867e">Coral (珊瑚粉 - 甜美轻盈)</option>
+        <option value="#e9d1b0">Pale Ochre (淡赭 - 奶茶色/低饱和暖)</option>
+        <option value="#8bc53f">Melon (哈密瓜绿 - 生机勃勃)</option>
+        <option value="#b2c2a2">Sage (鼠尾草绿 - 莫兰迪豆沙绿)</option>
+        <option value="#5ec7e0">Aqua (水蓝色 - 清透凉爽)</option>
+        <option value="#a1caf1">Dusty Blue (灰蓝色 - 极简灰蓝)</option>
+        <option value="#d6b4fc">Soft Violet (薰衣草 - 柔和优雅)</option>
+        <option value="#d1b3d1">Mauve (葵紫 - 复古灰紫)</option>
+        <option value="#8a8985">Light Grey (浅灰色 - 高级过渡)</option>
+    </optgroup>
     
- 
 `;
 
                 for (let i = 1; i <= 6; i++) {
@@ -185,12 +211,19 @@
                         <div class="layer-header">
                             <input type="checkbox" id="en${i}" ${i === 1 ? 'checked' : ''}>
                             <span>图层通道 ${i}</span>
-                            <select id="m${i}" style="width:auto; margin-left:auto; font-size:10px">
-                                <option value="BLEND">智能叠加 (Smart Blend)</option>
-                                <option value="MULTIPLY">经典正片叠底</option>
-                                <option value="COLOR_BURN">经典颜色加深</option>
-                            </select>
+ <select id="m${i}" style="width:auto; margin-left:auto; font-size:10px">
+    <option value="BLEND">智能叠加 (Smart Blend)</option>
+    <option value="MULTIPLY">经典正片叠底</option>
+    <option value="COLOR_BURN">经典颜色加深</option>
+    <option value="SCREEN">经典滤色 (发光)</option> </select>
                         </div>
+                        <div class="ctrl-group">
+    <label>旋转角度 (Angle) & 压力变形</label>
+    <div class="slider-row">
+        Rot: <input type="range" id="rot${i}" min="0" max="90" step="15" value="0" style="width:60%">
+        Def: <input type="range" id="def${i}" min="0.8" max="1.0" step="0.01" value="1" style="width:40%">
+    </div>
+</div>
                         <div class="ctrl-group">
                             <label>油墨与透明度</label>
                             <div class="slider-row">
@@ -217,9 +250,22 @@
         <option value="cmyk_k">黑色通道 (Key/Black)</option>
     </optgroup>
     <optgroup label="光影通道">
-        <option value="dark">深色阴影</option>
+        <option value="dark">深色阴影 selected</option>
         <option value="light">浅色亮部</option>
     </optgroup>
+    <optgroup label="橙色分色">
+    <option value="orange_red">红相橙 (暖橙)</option>
+    <option value="orange_yellow">黄相橙 (亮橙)</option>
+</optgroup>
+<optgroup label="绿色分色">
+    <option value="green_yellow">黄相绿 (嫩绿)</option>
+    <option value="green_blue">蓝相绿 (青绿)</option>
+</optgroup>
+<optgroup label="紫色分色">
+    <option value="purple_red">红相紫 (品紫)</option>
+    <option value="purple_blue">蓝相紫 (冷紫)</option>
+</optgroup>
+
 </select>
                                 <input type="range" id="s${i}" min="0.5" max="3.0" step="0.1" value="1.6">
                             </div>
@@ -308,6 +354,8 @@
             const blendKey = document.getElementById('m' + idx).value;
             const baseCol = color(document.getElementById('c' + idx).value);
             const alphaVal = float(document.getElementById('a' + idx).value);
+            const angle = float(document.getElementById('rot' + idx).value);
+const deform = float(document.getElementById('def' + idx).value);
             pg.clear();
             pg.fill(red(baseCol), green(baseCol), blue(baseCol), alphaVal);
             pg.noStroke();
@@ -346,33 +394,68 @@
                                 break;
                             case 'dark': strength = 255 - (p.r + p.g + p.b) / 3; break;
                             case 'light': strength = (p.r + p.g + p.b) / 3 - 128; break;
+                            
+                            // --- 橙色系 ---
+    case 'orange_red': strength = p.r - p.b; break;
+    case 'orange_yellow': strength = (p.r + p.g)/2 - p.b; break;
+    
+    // --- 绿色系 ---
+    case 'green_yellow': strength = p.g - p.b; break;
+    case 'green_blue': strength = (p.g + p.b)/2 - p.r; break;
+    
+    // --- 紫色系 ---
+    case 'purple_red': strength = (p.r + p.b)/2 - p.g * 0.8; break;
+    case 'purple_blue': strength = p.b - p.g; break;
                         }
 
                         const finalS = map(strength, 0, 255 - tolerance, 0, 255);
                         const radius = map(constrain(finalS, 0, 255), 0, 200, 0, dSize * dotScale);
-                        if (radius > 0.4) {
-                            pg.ellipse(map(x, 0, imgW, 0, width) + offX, map(y, 0, imgH, 0, height) + offY, radius);
-                        }
+if (radius > 0.4) {
+    // 只有当角度不是 0 且变形不是 1 时才使用坐标变换，否则直接画圆
+    if (angle === 0 && deform === 1.0) {
+        pg.ellipse(map(x, 0, imgW, 0, width) + offX, map(y, 0, imgH, 0, height) + offY, radius);
+    } else {
+        pg.push();
+        let drawX = map(x, 0, imgW, 0, width) + offX;
+        let drawY = map(y, 0, imgH, 0, height) + offY;
+        pg.translate(drawX, drawY);
+        pg.rotate(radians(angle));
+        pg.ellipse(0, 0, radius, radius * deform);
+        pg.pop();
+    }
+}
                     }
                 }
             }
 // 在 renderLayer 函数末尾的混合逻辑处修改
-push();
-const isWhite = document.getElementById('c' + idx).value.toLowerCase() === '#ffffff';
+// --- renderSmartLayer 函数末尾 ---
+push(); 
 
-if (isWhite) {
-    // 如果是白色油墨，使用 SCREEN (滤色) 或 LIGHTEN (变亮) 模式
-    // 这样它就能在深色底色上留下“发光”或“漂白”的痕迹
-    blendMode(SCREEN); 
-    image(pg, 0, 0);
-} else if (blendKey === 'BLEND') {
-    blendMode(MULTIPLY); 
-    image(pg, 0, 0);
+const userBlendMode = document.getElementById('m' + idx).value; // 获取下拉框的值
+const inkColor = document.getElementById('c' + idx).value.toLowerCase(); // 获取油墨颜色
+
+if (userBlendMode === 'BLEND') {
+    // 只有在“智能叠加”模式下，才根据颜色自动判断
+    if (inkColor === '#ffffff' ) {
+        blendMode(SCREEN); 
+    } else {
+        blendMode(MULTIPLY); 
+    }
 } else {
-    blendMode(eval(blendKey)); 
-    image(pg, 0, 0);
+    // 如果用户选了具体模式（正片叠底/颜色加深/滤色），则强制执行
+    // 这里的 eval 会直接把字符串 "COLOR_BURN" 转成 p5 内部的常量 COLOR_BURN
+    try {
+        blendMode(eval(userBlendMode)); 
+    } catch (e) {
+        blendMode(MULTIPLY); // 万一出错，回退到最稳的正片叠底
+    }
 }
-pop();
+
+image(pg, 0, 0); 
+pop(); 
+
+// 这一行极其重要：强制重置全局状态，否则下一层渲染会乱码
+blendMode(BLEND);
         }
     </script>
 </body>
