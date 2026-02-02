@@ -124,8 +124,11 @@
 
     <div class="controls">
         <div class="wide-slider-container">
-    <label style="font-size: 13px; font-weight: bold;">纸张背景:</label>
-    <input type="color" id="bgColorIn" value="#f2eee5" style="width:40px; height:30px; border:none; cursor:pointer; background:none;">
+<label style="font-size: 13px; font-weight: bold;">纸张背景:</label>
+<input type="color" id="bgColorIn" value="#f2eee5" style="width:40px; height:30px; border:none; cursor:pointer; background:none;">
+<span style="margin-left: 15px; font-size: 13px; font-weight: bold;">
+    <input type="checkbox" id="transPB" style="vertical-align: middle;"> 透明底导出
+</span>
 </div>
         <div class="top-bar">
             <div>
@@ -362,14 +365,25 @@ document.getElementById('imgInput').addEventListener('change', handleFile);
             reader.readAsDataURL(file);
         }
 
-        function draw() {
-// 获取用户选择的背景色
-    const bgCol = document.getElementById('bgColorIn').value;
-    background(bgCol);
+function draw() {
+            const isTransparent = document.getElementById('transPB').checked;
+            const bgCol = document.getElementById('bgColorIn').value;
+
+            if (isTransparent) {
+                clear(); // 如果勾选透明，清除画布背景
+            } else {
+                background(bgCol); // 否则绘制用户选的背景色
+            }
+
             if (!img) return;
-            push(); stroke(0, 10);
-            for (let i = 0; i < 6000; i++) point(random(width), random(height));
-            pop();
+
+            // 只有在非透明模式下才绘制纸张纹理点（否则点会浮在透明层上很奇怪）
+            if (!isTransparent) {
+                push(); stroke(0, 10);
+                for (let i = 0; i < 6000; i++) point(random(width), random(height));
+                pop();
+            }
+
             const globalGrid = parseInt(document.getElementById('gridIn').value);
             for (let i = 1; i <= 6; i++) {
                 if (document.getElementById('en' + i).checked) renderSmartLayer(i, globalGrid);
@@ -515,6 +529,7 @@ blendMode(BLEND);
             let data = {
                 gridSize: document.getElementById('gridIn').value,
                 bgColor: document.getElementById('bgColorIn').value,
+                isTrans: document.getElementById('transPB').checked,
                 layers: []
             };
             for (let i = 1; i <= 6; i++) {
@@ -539,6 +554,7 @@ blendMode(BLEND);
         function applyDataToUI(data) {
             document.getElementById('gridIn').value = data.gridSize;
             if(data.bgColor) document.getElementById('bgColorIn').value = data.bgColor;
+            if(data.isTrans !== undefined) document.getElementById('transPB').checked = data.isTrans;
             data.layers.forEach((l, idx) => {
                 let i = idx + 1;
                 document.getElementById('en' + i).checked = l.en;
