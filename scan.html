@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Digit Scan</title>
+    <style>
+        :root { --panel-bg: #1a1a1e; --accent: #00f2ff; --border: #333; --input-bg: #000; }
+        * { box-sizing: border-box; }
+        body { background: #0c0c0e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        .control-panel { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border); padding: 12px 20px; 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; z-index: 100;
+        }
+
+        .panel-section { display: flex; flex-direction: column; gap: 8px; }
+        .section-title { font-size: 10px; color: var(--accent); letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 4px; font-weight: bold; }
+        .control-item { display: flex; flex-direction: column; gap: 4px; }
+        .row-wrap { display: flex; gap: 8px; align-items: flex-end; }
+        label { font-size: 9px; color: #888; text-transform: uppercase; }
+        .val-display { color: var(--accent); font-family: monospace; font-size: 10px; float: right; }
+        
+        select, input[type="number"], input[type="file"], input[type="color"] { 
+            background: var(--input-bg); border: 1px solid var(--border); color: #fff; padding: 5px; border-radius: 4px; font-size: 11px; width: 100%;
+        }
+        input[type="range"] { accent-color: var(--accent); width: 100%; cursor: pointer; }
+        
+        .action-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px; }
+        button { border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; height: 38px; min-width: 100px; }
+        .btn-run { background: var(--accent); color: #000; }
+        .btn-save { background: #222; color: #ccc; border: 1px solid #444; }
+        button:hover { opacity: 0.8; }
+
+        .main-viewport { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #08080a; overflow: hidden; padding: 20px; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; box-shadow: 0 0 60px rgba(0,0,0,0.9); }
+    </style>
+</head>
+<body>
+
+<div class="control-panel">
+    <div class="panel-section">
+        <div class="section-title">01 INPUT & GLITCH</div>
+        <div class="control-item"><label>Source</label><input type="file" id="upload" accept="image/*"></div>
+        <div class="row-wrap">
+            <div class="control-item" style="flex:1"><label>Mode</label>
+                <select id="renderMode">
+                    <option value="stretch">Stretch</option>
+                    <option value="circshift" selected>CircShift</option>
+                    <option value="colorFill">ColorFill</option>
+                    <option value="invert">Invert</option>
+                </select>
+            </div>
+            <div class="control-item" style="flex:1"><label>RGB Split</label>
+                <select id="rgbSplit"><option value="off">OFF</option><option value="on">ON</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-section">
+        <div class="section-title">02 PIXEL FILTERS</div>
+        <div class="control-item"><label>Brightness <span id="b-val" class="val-display">100-124</span></label>
+            <div class="row-wrap"><input type="range" id="minB" min="0" max="255" value="100"><input type="range" id="maxB" min="0" max="255" value="124"></div>
+        </div>
+        <div class="row-wrap">
+            <div class="control-item" style="flex:1"><label>Scan Density <span id="d-val" class="val-display">8px</span></label>
+                <input type="range" id="stepRange" min="2" max="30" value="8">
+            </div>
+            <div class="control-item" style="flex:1"><label>Selection Rate <span id="r-val" class="val-display">100%</span></label>
+                <input type="range" id="selectRate" min="1" max="100" value="100">
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-section">
+        <div class="section-title">03 DIMENSIONS (N=8)</div>
+        <div class="row-wrap">
+            <div class="control-item"><label>Min W/H</label><div class="row-wrap"><input type="number" id="minW" value="5"><input type="number" id="minH" value="5"></div></div>
+            <div class="control-item"><label>Max W/H</label><div class="row-wrap"><input type="number" id="maxW" value="150"><input type="number" id="maxH" value="120"></div></div>
+        </div>
+        <div class="control-item" style="margin-top:4px"><label>Saturation <span id="s-val" class="val-display">0-100%</span></label>
+            <div class="row-wrap"><input type="range" id="minS" min="0" max="100" value="0"><input type="range" id="maxS" min="0" max="100" value="100"></div>
+        </div>
+    </div>
+
+    <div class="panel-section">
+        <div class="section-title">04 INTERFACE</div>
+        <div class="row-wrap">
+            <div class="control-item" style="flex:1"><label>UI Level</label>
+                <select id="displayLevel"><option value="both">Both</option><option value="boxes">Boxes</option><option value="none">None</option></select>
+            </div>
+            <div class="control-item" style="flex:1"><label>Box Style</label>
+                <select id="boxStyle"><option value="rect">Box</option><option value="hud">HUD</option></select>
+            </div>
+            <div class="control-item" style="flex:1"><label>Tag</label>
+                <select id="tagType"><option value="coord">Coord</option><option value="hex">Hex ID</option></select>
+            </div>
+        </div>
+        <div class="control-item" style="margin-top:4px">
+            <label>Thickness & Color <span id="w-val" class="val-display">1px</span></label>
+            <div class="row-wrap">
+                <input type="range" id="strokeWeight" min="1" max="10" value="1" style="flex:1">
+                <input type="color" id="boxColor" value="#ff0000" style="width:40px; height:24px">
+            </div>
+        </div>
+        <div class="action-group">
+            <button class="btn-run" onclick="processImage()">RUN_ANALYSIS</button>
+            <button class="btn-save" onclick="downloadResult()">SAVE_IMAGE</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-viewport"><canvas id="mainCanvas"></canvas></div>
+
+<script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let offCanvas = document.createElement('canvas');
+    let offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+    let originalImage = null;
+
+    const updateLabels = () => {
+        document.getElementById('b-val').innerText = `${document.getElementById('minB').value}-${document.getElementById('maxB').value}`;
+        document.getElementById('s-val').innerText = `${document.getElementById('minS').value}-${document.getElementById('maxS').value}%`;
+        document.getElementById('d-val').innerText = `${document.getElementById('stepRange').value}px`;
+        document.getElementById('r-val').innerText = `${document.getElementById('selectRate').value}%`;
+        document.getElementById('w-val').innerText = `${document.getElementById('strokeWeight').value}px`;
+    };
+    ['minB', 'maxB', 'minS', 'maxS', 'stepRange', 'selectRate', 'strokeWeight'].forEach(id => document.getElementById(id).oninput = updateLabels);
+
+    function getSaturation(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        if (max === min) return 0;
+        const d = max - min;
+        return Math.floor((l > 0.5 ? d / (2 - max - min) : d / (max + min)) * 100);
+    }
+
+    document.getElementById('upload').onchange = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                originalImage = img;
+                canvas.width = offCanvas.width = img.width;
+                canvas.height = offCanvas.height = img.height;
+                offCtx.drawImage(img, 0, 0); ctx.drawImage(img, 0, 0);
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    function processImage() {
+        if (!originalImage) return;
+        const config = {
+            mode: document.getElementById('renderMode').value,
+            rgbSplit: document.getElementById('rgbSplit').value === 'on',
+            display: document.getElementById('displayLevel').value,
+            boxStyle: document.getElementById('boxStyle').value,
+            tagType: document.getElementById('tagType').value,
+            minB: parseInt(document.getElementById('minB').value),
+            maxB: parseInt(document.getElementById('maxB').value),
+            minS: parseInt(document.getElementById('minS').value),
+            maxS: parseInt(document.getElementById('maxS').value),
+            minW: parseInt(document.getElementById('minW').value),
+            maxW: parseInt(document.getElementById('maxW').value),
+            minH: parseInt(document.getElementById('minH').value),
+            maxH: parseInt(document.getElementById('maxH').value),
+            uiColor: document.getElementById('boxColor').value,
+            strokeW: parseInt(document.getElementById('strokeWeight').value),
+            step: parseInt(document.getElementById('stepRange').value),
+            selectRate: parseInt(document.getElementById('selectRate').value)
+        };
+
+        ctx.drawImage(offCanvas, 0, 0);
+        const w = canvas.width, h = canvas.height;
+        const pureData = offCtx.getImageData(0, 0, w, h).data;
+        let taskQueue = [];
+
+        for (let y = 0; y < h; y += config.step) {
+            for (let x = 0; x < w; x += config.step) {
+                const i = (y * w + x) * 4;
+                const r = pureData[i], g = pureData[i+1], b = pureData[i+2];
+                const bri = 0.299*r + 0.587*g + 0.114*b;
+                const sat = getSaturation(r, g, b);
+
+                if (bri >= config.minB && bri <= config.maxB && sat >= config.minS && sat <= config.maxS) {
+                    if (Math.random() * 100 <= config.selectRate) {
+                        let randomValue = Math.random();
+                        let biasedRandomW = Math.pow(randomValue, 8); 
+                        let biasedRandomH = Math.pow(randomValue, 8); 
+
+                        const rw = Math.floor(biasedRandomW * (config.maxW - config.minW)) + config.minW;
+                        const rh = Math.floor(biasedRandomH * (config.maxH - config.minH)) + config.minH;
+
+                        const rx = Math.floor(x - rw / 2);
+                        const ry = Math.floor(y - rh / 2);
+
+                        const finalX = Math.max(0, Math.min(rx, w - rw));
+                        const finalY = Math.max(0, Math.min(ry, h - rh));
+
+                        taskQueue.push({ x: finalX, y: finalY, dw: rw, dh: rh, area: rw * rh, r, g, b });
+                    }
+                }
+            }
+        }
+
+        taskQueue.sort((a, b) => b.area - a.area); 
+        
+        taskQueue.forEach(t => {
+            if (config.rgbSplit) {
+                // RGB Split 逻辑：分别渲染红、蓝通道偏移
+                ctx.globalCompositeOperation = 'screen';
+                renderEffect({...t, x: t.x - 3, g:0, b:0}, config); // 偏红向左
+                renderEffect({...t, x: t.x + 3, r:0, g:0}, config); // 偏蓝向右
+                renderEffect(t, config); // 原色居中
+                ctx.globalCompositeOperation = 'source-over';
+            } else {
+                renderEffect(t, config);
+            }
+        });
+
+        if (config.display !== 'none') {
+            taskQueue.forEach(t => renderUI(t, config));
+        }
+    }
+
+    function renderEffect(t, config) {
+        const { x, y, dw, dh } = t;
+        if (config.mode === 'stretch') {
+            const strip = offCtx.getImageData(x, y, Math.min(10, dw), dh);
+            for (let o = 0; o < dw; o += 10) ctx.putImageData(strip, x + o, y);
+        } else if (config.mode === 'circshift') {
+            const area = offCtx.getImageData(x, y, dw, dh);
+            const res = ctx.createImageData(dw, dh);
+            const sx = Math.floor(Math.random()*dw), sy = Math.floor(Math.random()*dh);
+            for (let ay=0; ay<dh; ay++) {
+                for (let ax=0; ax<dw; ax++) {
+                    const tx = (ax+sx)%dw, ty = (ay+sy)%dh;
+                    const si = (ay*dw+ax)*4, ti = (ty*dw+tx)*4;
+                    for(let k=0; k<4; k++) res.data[ti+k] = area.data[si+k];
+                }
+            }
+            ctx.putImageData(res, x, y);
+        } else if (config.mode === 'colorFill') {
+            ctx.fillStyle = `rgb(${t.r},${t.g},${t.b})`; 
+            ctx.fillRect(x, y, dw, dh);
+        } else if (config.mode === 'invert') {
+            const area = offCtx.getImageData(x, y, dw, dh);
+            for (let j=0; j<area.data.length; j+=4) {
+                area.data[j] = 255-area.data[j]; area.data[j+1] = 255-area.data[j+1]; area.data[j+2] = 255-area.data[j+2];
+            }
+            ctx.putImageData(area, x, y);
+        }
+    }
+
+    function renderUI(t, config) {
+        const { x, y, dw, dh } = t;
+        ctx.strokeStyle = config.uiColor; 
+        ctx.lineWidth = config.strokeW;
+        
+        if (config.boxStyle === 'rect') {
+            ctx.strokeRect(x, y, dw, dh);
+        } else {
+            const len = Math.min(dw, dh) * 0.25;
+            ctx.beginPath();
+            ctx.moveTo(x, y + len); ctx.lineTo(x, y); ctx.lineTo(x + len, y);
+            ctx.moveTo(x + dw - len, y); ctx.lineTo(x + dw, y); ctx.lineTo(x + dw, y + len);
+            ctx.moveTo(x + dw, y + dh - len); ctx.lineTo(x + dw, y + dh); ctx.lineTo(x + dw - len, y + dh);
+            ctx.moveTo(x + len, y + dh); ctx.lineTo(x, y + dh); ctx.lineTo(x, y + dh - len);
+            ctx.stroke();
+        }
+
+        if (config.display === 'both') {
+            ctx.fillStyle = config.uiColor; 
+            ctx.font = '8px monospace';
+            const tag = config.tagType === 'coord' ? `X:${x} Y:${y}` : `0x${Math.floor(Math.random()*16777215).toString(16).toUpperCase()}`;
+            ctx.fillText(config.mode.toUpperCase(), x + 4, y + 8);
+            ctx.fillText(tag, x + 4, y + 17);
+        }
+    }
+
+    function downloadResult() {
+        if (!originalImage) return;
+        const link = document.createElement('a');
+        link.download = `lumina_glitch_hud.png`;
+        link.href = canvas.toDataURL(); link.click();
+    }
+</script>
+</body>
+</html>
